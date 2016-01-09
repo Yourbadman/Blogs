@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Not the alarm clock wake you up every day, is a dream！]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://yourbadman.github.io/"/>
-  <updated>2016-01-09T04:35:46.428Z</updated>
+  <updated>2016-01-09T05:55:51.321Z</updated>
   <id>http://yourbadman.github.io/</id>
   
   <author>
@@ -19,7 +19,7 @@
     <link href="http://yourbadman.github.io/2012/05/17/%E8%A1%97%E8%88%9E-%E8%BF%8E%E6%96%B0%E6%99%9A%E4%BC%9A/"/>
     <id>http://yourbadman.github.io/2012/05/17/街舞-迎新晚会/</id>
     <published>2012-05-17T04:23:37.000Z</published>
-    <updated>2016-01-09T04:35:46.428Z</updated>
+    <updated>2016-01-09T05:55:51.321Z</updated>
     <content type="html"><![CDATA[<blockquote>
 <p>热血！期望能一直跳下去。第一次上台，虽然没有个人的solo，已满足！</p>
 </blockquote>
@@ -31,6 +31,10 @@
 </blockquote>
 <div class="video-container"><iframe src="http://cache.tv.qq.com/qqplay]]>
     </summary>
+    
+      <category term="Popin" scheme="http://yourbadman.github.io/tags/Popin/"/>
+    
+      <category term="街舞" scheme="http://yourbadman.github.io/tags/%E8%A1%97%E8%88%9E/"/>
     
   </entry>
   

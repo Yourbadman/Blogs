@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Not the alarm clock wake you up every day, is a dream！]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://yourbadman.github.io/"/>
-  <updated>2016-06-05T03:47:10.913Z</updated>
+  <updated>2016-06-05T03:47:11.486Z</updated>
   <id>http://yourbadman.github.io/</id>
   
   <author>
@@ -19,7 +19,7 @@
     <link href="http://yourbadman.github.io/2016/03/04/android-handle-architecture/"/>
     <id>http://yourbadman.github.io/2016/03/04/android-handle-architecture/</id>
     <published>2016-03-04T04:00:37.000Z</published>
-    <updated>2016-06-05T03:47:10.913Z</updated>
+    <updated>2016-06-05T03:47:11.486Z</updated>
     <content type="html"><![CDATA[<hr>
 <p>Android中有有许多的通讯机制，<strong>Binder</strong>(进程间通讯)/<strong>管道</strong>(poll/epoll)/<strong>Socket</strong>(zygote与system_service)/共享内存，各有特点；Android的<strong>UI线程</strong>与<strong>工作线程</strong>的分离,使得<strong>Handler</strong>机制孕育而生，显然，Handler适用线程与线程之间的通信；梳理了<strong>Handler/Looper/MessageQueue</strong>之间的关系，觉得吧，发现真正的苦力在<strong>MessageQueue</strong>（ps：native层的处理）,<strong>Handler</strong>是‘管理者’（ps:入口类）；</p>
 <blockquote>
@@ -149,7 +149,7 @@
     <link href="http://yourbadman.github.io/2016/01/20/android-multidex-problem/"/>
     <id>http://yourbadman.github.io/2016/01/20/android-multidex-problem/</id>
     <published>2016-01-19T16:00:00.000Z</published>
-    <updated>2016-01-23T08:22:13.260Z</updated>
+    <updated>2016-06-04T09:49:46.516Z</updated>
     <content type="html"><![CDATA[<blockquote>
 <p>当一个<strong>Android</strong>应用的方法超过<strong>65K</strong>的时候你可能就会发现问题（可能你代码进行了<strong>混淆</strong>，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在Android的社区一次一次的被讨论，问题的解决方法就是Multidex，将代码打包为多dex。在<strong>Google</strong>用<strong>multidex</strong>完美解决了，但是我发现了一个很明显的问题：就是在App启动时速度明显变慢了。写这篇文章的目的在于帮助那些没有听过<strong>Mutildex</strong>带来的影响和想要知道如何解决<strong>Mutildex</strong>问题的开发者。</p>
 </blockquote>

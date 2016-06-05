@@ -1,0 +1,752 @@
+<!doctype html>
+<html class="theme-next   use-motion ">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.4.5.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,Multidex," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="JsonWong's Blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.jpg?v=0.4.5.2" />
+
+
+
+
+
+
+<meta name="description" content="当一个Android应用的方法超过65K的时候你可能就会发现问题（可能你代码进行了混淆，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在Android的社区一次一次的被讨论，问题的解决方法就是Multidex，将代码打包为多dex。在Google用multidex完美解决了，但是我发现了一个很明显的问题：就是在App启动时速度明显变慢了。写这篇文章的目的在于帮助那些没有听过Mutildex带">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android Multidex问题">
+<meta property="og:url" content="http://yourbadman.github.io/2016/01/20/android-multidex-problem/index.html">
+<meta property="og:site_name" content="JsonWong's Blog">
+<meta property="og:description" content="当一个Android应用的方法超过65K的时候你可能就会发现问题（可能你代码进行了混淆，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在Android的社区一次一次的被讨论，问题的解决方法就是Multidex，将代码打包为多dex。在Google用multidex完美解决了，但是我发现了一个很明显的问题：就是在App启动时速度明显变慢了。写这篇文章的目的在于帮助那些没有听过Mutildex带">
+<meta property="og:image" content="http://yourbadman.github.io/./images/android_pack_apk.png">
+<meta property="og:image" content="http://yourbadman.github.io/./images/android-multidex-start-compare-time.png">
+<meta property="og:updated_time" content="2016-01-23T08:22:13.260Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Android Multidex问题">
+<meta name="twitter:description" content="当一个Android应用的方法超过65K的时候你可能就会发现问题（可能你代码进行了混淆，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在Android的社区一次一次的被讨论，问题的解决方法就是Multidex，将代码打包为多dex。在Google用multidex完美解决了，但是我发现了一个很明显的问题：就是在App启动时速度明显变慢了。写这篇文章的目的在于帮助那些没有听过Mutildex带">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'always',
+    motion: true
+  };
+</script>
+
+  <title> Android Multidex问题 | JsonWong's Blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">JsonWong's Blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">Not the alarm clock wake you up every day, is a dream！</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu menu-left">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-heartbeat fa-fw"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  
+  <form class="site-search-form">
+    <input type="text" id="st-search-input" class="st-search-input st-default-search-input" />
+  </form>
+
+
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+    (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+    e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install', 'vseYZm7U1UMCoAyPaQxN','2.0.0');
+</script>
+
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content">
+          
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Android Multidex问题
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            发表于
+            <time itemprop="dateCreated" datetime="2016-01-20T00:00:00+08:00" content="2016-01-20">
+              2016-01-20
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/01/20/android-multidex-problem/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/01/20/android-multidex-problem/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><blockquote>
+<p>当一个<strong>Android</strong>应用的方法超过<strong>65K</strong>的时候你可能就会发现问题（可能你代码进行了<strong>混淆</strong>，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在Android的社区一次一次的被讨论，问题的解决方法就是Multidex，将代码打包为多dex。在<strong>Google</strong>用<strong>multidex</strong>完美解决了，但是我发现了一个很明显的问题：就是在App启动时速度明显变慢了。写这篇文章的目的在于帮助那些没有听过<strong>Mutildex</strong>带来的影响和想要知道如何解决<strong>Mutildex</strong>问题的开发者。</p>
+</blockquote>
+<h4 id="u524D_u6CBF"><a href="#u524D_u6CBF" class="headerlink" title="前沿"></a>前沿</h4><blockquote>
+<p>对于初学者而言，首先应该了解什么是.dex文件，以及<strong>Andoird apk</strong>的打包<strong>流程</strong>：</p>
+</blockquote>
+<p><img src="/./images/android_pack_apk.png" alt="Android apk编译过程"></p>
+<blockquote>
+<p>简单的说：.java文件会被<strong>javac</strong>编译为.class文件（<strong>基于栈虚拟机</strong>），交叉编译为.dex文件（<strong>基于寄存器虚拟机</strong>），然后再和所需的资源打包为<strong>apk</strong>,在编译为.dex过程中，会限制.dex的方法数，尽管Google解决了这个限制（MultiDex）,但是可能会引发App启动的性能问题（多dex的加载比较耗时）和方法访问问题。</p>
+</blockquote>
+<h4 id="u8BBE_u7F6EMultiDex"><a href="#u8BBE_u7F6EMultiDex" class="headerlink" title="设置MultiDex"></a>设置MultiDex</h4><p>MultiDex的方案已经很成熟了，可以参考官网的<a href="http://developer.android.com/tools/building/multidex.html#mdex-gradle" target="_blank" rel="external">MultiDex配置</a>，也可以参考我的<a href="https://github.com/Yourbadman/multidex-sample" target="_blank" rel="external">Demo</a></p>
+<h4 id="NoClassDefFoundError"><a href="#NoClassDefFoundError" class="headerlink" title="NoClassDefFoundError"></a>NoClassDefFoundError</h4><p>当设置了MultiDex可能会出现这个问题，<strong>java.lang.NoClassDefFoundError</strong> 。<strong>AndroidStudio</strong>中打包需要用<strong>Gradle</strong>且要求AndroidSDK的版本大于<strong>21.1</strong>，<strong>Proguard</strong>后，后再<strong>[buildDir]/intermediates/multi-dex/[buildType]/maindexlist.txt</strong>找到启动所需的<strong>.class</strong>文件，但是这个文件并非完全正确，可能会确实启动所需的<strong>.class</strong>文件，所以需要手动的添加，在下面会介绍如何添加<strong>.class</strong>文件。</p>
+<h4 id="u89E3_u51B3NoClassDefFoundError_u95EE_u9898"><a href="#u89E3_u51B3NoClassDefFoundError_u95EE_u9898" class="headerlink" title="解决NoClassDefFoundError问题"></a>解决NoClassDefFoundError问题</h4><ul>
+<li>在你的项目中添加<strong>multidex.keep</strong>；</li>
+<li>将出现<strong>NoClassDefFoundError</strong>的完整类名添加到文件中；</li>
+<li>在你的项目中的<strong>build.gradle</strong>文件中添加以下的脚本。这个脚本的作用是将<strong>multidex.keep</strong>中的内容和<strong>gradle</strong>自动生成的<strong>maindexlist.txt</strong>组合然后再编译，这样就可以将缺失的.class文件编译了。</li>
+</ul>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">android &#123;</span><br><span class="line">    compileSdkVersion <span class="number">23</span></span><br><span class="line">    buildToolsVersion <span class="string">"23.0.1"</span></span><br><span class="line"></span><br><span class="line">    defaultConfig &#123;</span><br><span class="line">        applicationId <span class="string">"com.github.mmadev.multidexsample"</span></span><br><span class="line">        minSdkVersion <span class="number">16</span></span><br><span class="line">        targetSdkVersion <span class="number">23</span></span><br><span class="line">        versionCode <span class="number">1</span></span><br><span class="line">        versionName <span class="string">"1.0"</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">//开启MultiDex</span></span><br><span class="line">        multiDexEnabled <span class="keyword">true</span></span><br><span class="line">    &#125;</span><br><span class="line">    buildTypes &#123;</span><br><span class="line">        release &#123;</span><br><span class="line">            minifyEnabled <span class="keyword">true</span></span><br><span class="line">            proguardFiles getDefaultProguardFile(<span class="string">'proguard-android.txt'</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">dependencies</span> &#123;</span><br><span class="line">    <span class="keyword">compile</span> <span class="keyword">fileTree</span>(dir: <span class="string">'libs'</span>, <span class="keyword">include</span>: [<span class="string">'*.jar'</span>])</span><br><span class="line">    <span class="keyword">compile</span> <span class="string">'com.android.support:multidex:1.0.1'</span></span><br><span class="line">    <span class="keyword">compile</span> <span class="string">"com.android.support:support-v4:23.0.1"</span></span><br><span class="line">&#125;</span><br><span class="line">android.applicationVariants.all &#123; variant -&gt;</span><br><span class="line">    <span class="keyword">task</span> <span class="string">"fix$&#123;variant.name.capitalize()&#125;MainDexClassList"</span> &lt;&lt; &#123;</span><br><span class="line">        logger.info <span class="string">"Fixing main dex keep file for $variant.name"</span></span><br><span class="line">        <span class="keyword">File</span> keepFile = <span class="keyword">new</span> <span class="keyword">File</span>(<span class="string">"$buildDir/intermediates/multi-dex/$variant.buildType.name/maindexlist.txt"</span>)</span><br><span class="line">        keepFile.<span class="keyword">withWriterAppend</span> &#123; w -&gt;</span><br><span class="line">            <span class="comment">// 获取输入的文件</span></span><br><span class="line">            w.<span class="keyword">append</span>(<span class="string">'\n'</span>)</span><br><span class="line">            <span class="keyword">new</span> <span class="keyword">File</span>(<span class="string">"$&#123;projectDir&#125;/multidex.keep"</span>).<span class="keyword">withReader</span> &#123; r -&gt;</span><br><span class="line">                <span class="comment">// 写入文件</span></span><br><span class="line">                w &lt;&lt; r &lt;&lt; <span class="string">'\n'</span></span><br><span class="line">            &#125;</span><br><span class="line">            logger.info <span class="string">"Updated main dex keep file for $&#123;keepFile.getAbsolutePath()&#125;\n$keepFile.text"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">tasks.whenTaskAdded &#123; <span class="keyword">task</span> -&gt;</span><br><span class="line">    android.applicationVariants.all &#123; variant -&gt;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">task</span>.name == <span class="string">"create$&#123;variant.name.capitalize()&#125;MainDexClassList"</span>) &#123;</span><br><span class="line">            <span class="keyword">task</span>.finalizedBy <span class="string">"fix$&#123;variant.name.capitalize()&#125;MainDexClassList"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="MultiDex_u6240_u5E26_u6765_u7684_u6027_u80FD_u5F71_u54CD"><a href="#MultiDex_u6240_u5E26_u6765_u7684_u6027_u80FD_u5F71_u54CD" class="headerlink" title="MultiDex所带来的性能影响"></a>MultiDex所带来的性能影响</h4><p>前面已经提及如何配置MultiDex,现在来提提其影响，会拖慢App启动时间大约15%，当然如果dex越大，启动时间就越长。</p>
+<h4 id="u89E3_u51B3multidex_u5E94_u7528_u542F_u52A8_u6027_u80FD_u7684_u5F71_u54CD"><a href="#u89E3_u51B3multidex_u5E94_u7528_u542F_u52A8_u6027_u80FD_u7684_u5F71_u54CD" class="headerlink" title="解决multidex应用启动性能的影响"></a>解决multidex应用启动性能的影响</h4><ul>
+<li><a href="https://medium.com/@Macarse/lazy-loading-dex-files-d41f6f37df0e#.fsjm3hf9c" target="_blank" rel="external">懒加载Dex文件</a>可以加速启动速度，但是内存会变大。</li>
+<li>应用启动时的运行时检查后，去加载首页中需要加载用其他Dex中的类（<strong>ClassLoader</strong>提供支持），然后添加到<strong>multidex.keep</strong>中。</li>
+</ul>
+<figure class="highlight dart"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">           <span class="keyword">final</span> <span class="built_in">List</span>&lt;<span class="built_in">String</span>&gt; externalDexClasses = getExternalDexClasses(context);</span><br><span class="line">           <span class="keyword">if</span> (externalDexClasses != <span class="keyword">null</span> &amp;&amp; !externalDexClasses.isEmpty()) &#123;</span><br><span class="line">               <span class="keyword">final</span> ArrayList&lt;<span class="built_in">String</span>&gt; classList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">               <span class="keyword">final</span> java.lang.reflect.Method m = ClassLoader.<span class="keyword">class</span>.getDeclaredMethod(<span class="string">"findLoadedClass"</span>, <span class="keyword">new</span> Class[]&#123;<span class="built_in">String</span>.<span class="keyword">class</span>&#125;);</span><br><span class="line">               m.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">               <span class="keyword">final</span> ClassLoader cl = context.getClassLoader();</span><br><span class="line">               <span class="keyword">for</span> (<span class="built_in">String</span> clazz : externalDexClasses) &#123;</span><br><span class="line">                   <span class="keyword">if</span> (m.invoke(cl, clazz) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                       classList.add(clazz.replaceAll(<span class="string">"\\."</span>, <span class="string">"/"</span>).replaceAll(<span class="string">"$"</span>, <span class="string">".class"</span>));</span><br><span class="line">                   &#125;</span><br><span class="line">               &#125;</span><br><span class="line">               <span class="keyword">return</span> classList;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">           e.printStackTrace();</span><br><span class="line">       &#125;</span><br></pre></td></tr></table></figure>
+<p><strong>详情<a href="https://github.com/Yourbadman/multidex-sample" target="_blank" rel="external">Demo</a> </strong></p>
+<ul>
+<li>调用<strong>MultiDexUtils.getLoadedExternalDexClasses</strong> 方法获取需要的类列表。</li>
+<li>将获取到的列表添加到<strong>multidex.keep</strong>中。</li>
+</ul>
+<h4 id="u7ED3_u679C"><a href="#u7ED3_u679C" class="headerlink" title="结果"></a>结果</h4><p>直接上图吧。<br><img src="/./images/android-multidex-start-compare-time.png" alt="compare-time"></p>
+<h4 id="u7ED3_u8BBA"><a href="#u7ED3_u8BBA" class="headerlink" title="结论"></a>结论</h4><p>MultiDex会引发很多的问题，建议在代码超过65k再去考虑多Dex,在此之前，可以利用代码重构减少一部分的代码或者删除无用的方法。</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/Multidex/" rel="tag">#Multidex</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/01/14/android_annotation/" rel="next" title="Andorid的ORM中注解框架原理">
+                <i class="fa fa-chevron-left"></i> Andorid的ORM中注解框架原理
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/02/04/android_memory_optimize_tip/" rel="prev" title="Android最佳性能实践—合理管理内存">
+                Android最佳性能实践—合理管理内存 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <div class="ds-share flat" data-thread-key="2016/01/20/android-multidex-problem/"
+     data-title="Android Multidex问题"
+     data-content=""
+     data-url="http://yourbadman.github.io/2016/01/20/android-multidex-problem/">
+  <div class="ds-share-inline">
+    <ul  class="ds-share-icons-16">
+
+      <li data-toggle="ds-share-icons-more"><a class="ds-more" href="javascript:void(0);">分享到：</a></li>
+      <li><a class="ds-weibo" href="javascript:void(0);" data-service="weibo">微博</a></li>
+      <li><a class="ds-qzone" href="javascript:void(0);" data-service="qzone">QQ空间</a></li>
+      <li><a class="ds-qqt" href="javascript:void(0);" data-service="qqt">腾讯微博</a></li>
+      <li><a class="ds-wechat" href="javascript:void(0);" data-service="wechat">微信</a></li>
+
+    </ul>
+    <div class="ds-share-icons-more">
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+
+
+        </div>
+
+        
+
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
+
+        
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/01/20/android-multidex-problem/"
+           data-title="Android Multidex问题" data-url="http://yourbadman.github.io/2016/01/20/android-multidex-problem/">
+      </div>
+    
+  </div>
+
+
+      </div>
+
+      
+        
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/avatar.jpg" alt="JsonWong" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">JsonWong</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">记录每一天的成长!努力成为全栈工程师！</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">5</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            
+              <span class="site-state-item-count">0</span>
+              <span class="site-state-item-name">分类</span>
+              
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/Yourbadman" target="_blank">
+                  
+                    <i class="fa fa-globe"></i> github
+                  
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#u524D_u6CBF"><span class="nav-number">1.</span> <span class="nav-text">前沿</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#u8BBE_u7F6EMultiDex"><span class="nav-number">2.</span> <span class="nav-text">设置MultiDex</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NoClassDefFoundError"><span class="nav-number">3.</span> <span class="nav-text">NoClassDefFoundError</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#u89E3_u51B3NoClassDefFoundError_u95EE_u9898"><span class="nav-number">4.</span> <span class="nav-text">解决NoClassDefFoundError问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MultiDex_u6240_u5E26_u6765_u7684_u6027_u80FD_u5F71_u54CD"><span class="nav-number">5.</span> <span class="nav-text">MultiDex所带来的性能影响</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#u89E3_u51B3multidex_u5E94_u7528_u542F_u52A8_u6027_u80FD_u7684_u5F71_u54CD"><span class="nav-number">6.</span> <span class="nav-text">解决multidex应用启动性能的影响</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#u7ED3_u679C"><span class="nav-number">7.</span> <span class="nav-text">结果</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#u7ED3_u8BBA"><span class="nav-number">8.</span> <span class="nav-text">结论</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+      
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2012 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">JsonWong</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="#">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="#">
+    NexT.Mist
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"jsonwong"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+
+    
+  
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.2"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.2"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+<script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+<script type="text/javascript" src="/js/motion.js?v=0.4.5.2" id="motion.global"></script>
+
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.2" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    motionMiddleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  <script type="text/javascript" src="/js/bootstrap.js"></script>
+
+  
+  
+
+  
+  
+
+</body>
+</html>

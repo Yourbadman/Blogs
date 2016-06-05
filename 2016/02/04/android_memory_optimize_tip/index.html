@@ -1,0 +1,759 @@
+<!doctype html>
+<html class="theme-next   use-motion ">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.4.5.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,内存优化," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="JsonWong's Blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.jpg?v=0.4.5.2" />
+
+
+
+
+
+
+<meta name="description" content="合理有效的内存管理大大提高性能，以下将整理优化内存的方法及注意事项。
+
+1.当界面不可见时释放内存  当用户打开了另外一个程序，我们的程序界面已经不再可见的时候，我们应当将所有和界面相关的资源进行释放。在这种场景下释放资源可以让系统缓存后台进程的能力显著增加，因此也会让用户体验变得更好。那么我们如何才能知道程序界面是不是已经不可见了呢？其实很简单，只需要在Activity中重写onTrimMemo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android最佳性能实践—合理管理内存">
+<meta property="og:url" content="http://yourbadman.github.io/2016/02/04/android_memory_optimize_tip/index.html">
+<meta property="og:site_name" content="JsonWong's Blog">
+<meta property="og:description" content="合理有效的内存管理大大提高性能，以下将整理优化内存的方法及注意事项。
+
+1.当界面不可见时释放内存  当用户打开了另外一个程序，我们的程序界面已经不再可见的时候，我们应当将所有和界面相关的资源进行释放。在这种场景下释放资源可以让系统缓存后台进程的能力显著增加，因此也会让用户体验变得更好。那么我们如何才能知道程序界面是不是已经不可见了呢？其实很简单，只需要在Activity中重写onTrimMemo">
+<meta property="og:updated_time" content="2016-02-15T10:02:18.685Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Android最佳性能实践—合理管理内存">
+<meta name="twitter:description" content="合理有效的内存管理大大提高性能，以下将整理优化内存的方法及注意事项。
+
+1.当界面不可见时释放内存  当用户打开了另外一个程序，我们的程序界面已经不再可见的时候，我们应当将所有和界面相关的资源进行释放。在这种场景下释放资源可以让系统缓存后台进程的能力显著增加，因此也会让用户体验变得更好。那么我们如何才能知道程序界面是不是已经不可见了呢？其实很简单，只需要在Activity中重写onTrimMemo">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'always',
+    motion: true
+  };
+</script>
+
+  <title> Android最佳性能实践—合理管理内存 | JsonWong's Blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">JsonWong's Blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">Not the alarm clock wake you up every day, is a dream！</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu menu-left">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-heartbeat fa-fw"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  
+  <form class="site-search-form">
+    <input type="text" id="st-search-input" class="st-search-input st-default-search-input" />
+  </form>
+
+
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+    (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+    e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install', 'vseYZm7U1UMCoAyPaQxN','2.0.0');
+</script>
+
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content">
+          
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Android最佳性能实践—合理管理内存
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            发表于
+            <time itemprop="dateCreated" datetime="2016-02-04T12:23:37+08:00" content="2016-02-04">
+              2016-02-04
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/02/04/android_memory_optimize_tip/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/02/04/android_memory_optimize_tip/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><hr>
+<blockquote>
+<p>合理有效的内存管理大大提高性能，以下将整理优化内存的方法及注意事项。</p>
+</blockquote>
+<h4 id="1-_u5F53_u754C_u9762_u4E0D_u53EF_u89C1_u65F6_u91CA_u653E_u5185_u5B58"><a href="#1-_u5F53_u754C_u9762_u4E0D_u53EF_u89C1_u65F6_u91CA_u653E_u5185_u5B58" class="headerlink" title="1.当界面不可见时释放内存"></a>1.当界面不可见时释放内存</h4><p>  当用户打开了另外一个程序，我们的程序界面已经不再可见的时候，我们应当将所有和界面相关的资源进行释放。在这种场景下释放资源可以让系统缓存后台进程的能力显著增加，因此也会让用户体验变得更好。<br>那么我们如何才能知道程序界面是不是已经不可见了呢？其实很简单，只需要在<strong>Activity</strong>中重写<strong>onTrimMemory()</strong>方法，然后在这个方法中监听<strong>TRIM_MEMORY_UI_HIDDEN</strong>这个级别，一旦触发了之后就说明用户已经离开了我们的程序，那么此时就可以进行资源释放操作了，如下所示：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Override</span>  </span><br><span class="line"><span class="keyword">public</span> <span class="typename">void</span> onTrimMemory(<span class="typename">int</span> level) &#123;  </span><br><span class="line">    <span class="keyword">super</span>.onTrimMemory(level);  </span><br><span class="line">    <span class="keyword">switch</span> (level) &#123;  </span><br><span class="line">    <span class="keyword">case</span> <span class="string">TRIM_MEMORY_UI_HIDDEN:</span>  </span><br><span class="line">        <span class="comment">// 进行资源释放操作  </span></span><br><span class="line">        <span class="keyword">break</span>;  </span><br><span class="line">    &#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意:<strong>onTrimMemory()方法中的TRIM_MEMORY_UI_HIDDEN回调只有当我们程序中的所有UI组件全部不可见的时候才会触发，这和onStop()方法还是有很大区别的，因为onStop()方法只是当一个Activity完全不可见的时候就会调用</strong>，比如说用户打开了我们程序中的另一个Activity。因此，我们可以在<strong>onStop</strong>()方法中去释放一些Activity相关的资源，比如说取消网络连接或者注销广播接收器等，但是像UI相关的资源应该一直要等到<strong>onTrimMemory</strong>(<strong>TRIM_MEMORY_UI_HIDDEN</strong>)这个回调之后才去释放，这样可以保证如果用户只是从我们程序的一个Activity回到了另外一个Activity，界面相关的资源都不需要重新加载，从而提升响应速度。</p>
+<h4 id="2-_u8282_u5236_u5730_u4F7F_u7528Service"><a href="#2-_u8282_u5236_u5730_u4F7F_u7528Service" class="headerlink" title="2.节制地使用Service"></a>2.节制地使用Service</h4><p>如果应用程序当中需要使用Service来执行后台任务的话，请一定要注意只有当任务正在执行的时候才应该让Service运行起来。另外，<strong>当任务执行完之后去停止Service的时候，要小心Service停止失败导致内存泄漏的情况</strong>。<br>当我们启动一个Service时，系统会倾向于将这个Service所依赖的进程进行保留，这样就会导致这个进程变得非常消耗内存。并且，<strong>系统可以在LRU cache当中缓存的进程数量也会减少，导致切换应用程序的时候耗费更多性能</strong>。严重的话，甚至有可能会导致崩溃，因为系统在内存非常吃紧的时候可能已无法维护所有正在运行的Service所依赖的进程了。<br><strong>推荐使用：</strong><br><strong>为了能够控制Service的生命周期，Android官方推荐的最佳解决方案就是使用IntentService，这种Service的最大特点就是当后台任务执行结束后会自动停止，从而极大程度上避免了Service内存泄漏的可能性</strong></p>
+<h4 id="3-_u5F53_u5185_u5B58_u7D27_u5F20_u65F6_u91CA_u653E_u5185_u5B58"><a href="#3-_u5F53_u5185_u5B58_u7D27_u5F20_u65F6_u91CA_u653E_u5185_u5B58" class="headerlink" title="3.当内存紧张时释放内存"></a>3.当内存紧张时释放内存</h4><p>除了刚才讲的<strong>TRIM_MEMORY_UI_HIDDEN</strong>这个回调，<strong>onTrimMemory</strong>()方法还有很多种其它类型的回调，可以在手机内存降低的时候及时通知我们。我们应该根据回调中传入的级别来去决定如何释放应用程序的资源：</p>
+<ul>
+<li><strong>TRIM_MEMORY_RUNNING_MODERATE</strong>    表示应用程序正常运行，并且不会被杀掉。但是目前手机的内存已经有点低了，系统可能会开始根据LRU缓存规则来去杀死进程了。</li>
+<li><strong>TRIM_MEMORY_RUNNING_LOW</strong>    表示应用程序正常运行，并且不会被杀掉。但是目前手机的内存已经非常低了，我们应该去释放掉一些不必要的资源以提升系统的性能，同时这也会直接影响到我们应用程序的性能。</li>
+<li><strong>TRIM_MEMORY_RUNNING_CRITICAL</strong>    表示应用程序仍然正常运行，但是系统已经根据LRU缓存规则杀掉了大部分缓存的进程了。这个时候我们应当尽可能地去释放任何不必要的资源，不然的话系统可能会继续杀掉所有缓存中的进程，并且开始杀掉一些本来应当保持运行的进程，比如说后台运行的服务。</li>
+</ul>
+<p><strong>以上是当我们的应用程序正在运行时的回调，那么如果我们的程序目前是被缓存的，则会收到以下几种类型的回调：</strong></p>
+<ul>
+<li><strong>TRIM_MEMORY_BACKGROUND</strong>    表示手机目前内存已经很低了，系统准备开始根据LRU缓存来清理进程。这个时候我们的程序在LRU缓存列表的最近位置，是不太可能被清理掉的，但这时去释放掉一些比较容易恢复的资源能够让手机的内存变得比较充足，从而让我们的程序更长时间地保留在缓存当中，这样当用户返回我们的程序时会感觉非常顺畅，而不是经历了一次重新启动的过程。</li>
+<li><strong>TRIM_MEMORY_MODERATE</strong>    表示手机目前内存已经很低了，并且我们的程序处于LRU缓存列表的中间位置，如果手机内存还得不到进一步释放的话，那么我们的程序就有被系统杀掉的风险了。</li>
+<li><strong>TRIM_MEMORY_COMPLETE</strong>    表示手机目前内存已经很低了，并且我们的程序处于LRU缓存列表的最边缘位置，系统会最优先考虑杀掉我们的应用程序，在这个时候应当尽可能地把一切可以释放的东西都进行释放。</li>
+</ul>
+<h4 id="4-_u907F_u514D_u5728Bitmap_u4E0A_u6D6A_u8D39_u5185_u5B58"><a href="#4-_u907F_u514D_u5728Bitmap_u4E0A_u6D6A_u8D39_u5185_u5B58" class="headerlink" title="4.避免在Bitmap上浪费内存"></a>4.避免在Bitmap上浪费内存</h4><p>前言：<strong>将一张图片解析成一个Bitmap对象时所占用的内存并不是这个图片在硬盘中的大小，可能一张图片只有100k你觉得它并不大，但是读取到内存当中是按照像素点来算的，比如这张图片是1500<em>1000像素，使用的ARGB_8888颜色类型，那么每个像素点就会占用4个字节，总内存就是1500</em>1000*4字节，也就是5.7M，这个数据看起来就比较恐怖了。</strong></p>
+<p>在展示高分辨率图片的时候，最好先将图片进行压缩。压缩后的图片大小应该和用来展示它的控件大小相近，在一个很小的ImageView上显示一张超大的图片不会带来任何视觉上的好处，但却会占用我们相当多宝贵的内存，而且在性能上还可能会带来负面影响。（ps:BitmapFactory.Options options.inSampleSize按比例缩小）</p>
+<h4 id="5-_u4F7F_u7528_u4F18_u5316_u8FC7_u7684_u6570_u636E_u96C6_u5408"><a href="#5-_u4F7F_u7528_u4F18_u5316_u8FC7_u7684_u6570_u636E_u96C6_u5408" class="headerlink" title="5.使用优化过的数据集合"></a>5.使用优化过的数据集合</h4><p>Android API当中提供了一些优化过后的数据集合工具类，如<strong>SparseArray</strong>，<strong>SparseBooleanArray</strong>，以及<strong>LongSparseArray</strong>等，使用这些API可以让我们的程序更加高效。传统Java API中提供的HashMap工具类会相对比较低效，因为它需要为每一个键值对都提供一个对象入口，而<strong>SparseArray就避免掉了基本数据类型转换成对象数据类型的时间</strong>。</p>
+<h4 id="6-_u77E5_u6653_u5185_u5B58_u7684_u5F00_u652F_u60C5_u51B5"><a href="#6-_u77E5_u6653_u5185_u5B58_u7684_u5F00_u652F_u60C5_u51B5" class="headerlink" title="6.知晓内存的开支情况"></a>6.知晓内存的开支情况</h4><ul>
+<li>使用<strong>枚举</strong>通常会比使用静态常量要<strong>消耗两倍以上的内存</strong>，在Android开发当中我们应当尽可能地不使用枚举。</li>
+<li>任何一个Java类，包括内部类、匿名类，都要占用大概<strong>500字节的内存空间</strong>。</li>
+<li>任何一个类的实例要消耗<strong>12-16字节</strong>的内存开支，因此频繁创建实例也是会一定程序上影响内存的。</li>
+<li>在使用<strong>HashMap</strong>时，即使你只设置了一个基本数据类型的键，比如说int，但是也会按照对象的大小来分配内存，大概是32字节，而不是4字节。因此最好的办法就是像上面所说的一样，<strong>使用优化过的数据集合</strong>。</li>
+</ul>
+<h4 id="7-_u8C28_u614E_u4F7F_u7528_u62BD_u8C61_u7F16_u7A0B"><a href="#7-_u8C28_u614E_u4F7F_u7528_u62BD_u8C61_u7F16_u7A0B" class="headerlink" title="7.谨慎使用抽象编程"></a>7.谨慎使用抽象编程</h4><p>在Android上使用抽象会带来额外的内存开支，因为抽象的编程方法需要编写额外的代码，虽然这些代码根本执行不到，但是却也要映射到内存当中，不仅占用了更多的内存，在执行效率方面也会有所降低。</p>
+<h4 id="8-_u5C3D_u91CF_u907F_u514D_u4F7F_u7528_u4F9D_u8D56_u6CE8_u5165_u6846_u67B6"><a href="#8-_u5C3D_u91CF_u907F_u514D_u4F7F_u7528_u4F9D_u8D56_u6CE8_u5165_u6846_u67B6" class="headerlink" title="8.尽量避免使用依赖注入框架"></a>8.尽量避免使用依赖注入框架</h4><p>注入框架的实现原理基本可以参照<a href="http://www.jsonwong.cn/2016/01/14/android_annotation/" target="_blank" rel="external">Andorid的ORM中注解框架原理</a>，虽然可以大大提高开发速度，但是追求完美的码农显然不能接受其在速度和内存上的开销。</p>
+<h4 id="9-_u4F7F_u7528ProGuard_u7B80_u5316_u4EE3_u7801"><a href="#9-_u4F7F_u7528ProGuard_u7B80_u5316_u4EE3_u7801" class="headerlink" title="9.使用ProGuard简化代码"></a>9.使用ProGuard简化代码</h4><p><strong>ProGuard</strong>相信大家都不会陌生，很多人都会使用这个工具来混淆代码，但是除了混淆之外，它还具有压缩和优化代码的功能。ProGuard会对我们的代码进行检索，删除一些无用的代码，并且会对类、字段、方法等进行重命名，重命名之后的类、字段和方法名都会比原来简短很多，这样的话也就对内存的占用变得更少了。</p>
+<h4 id="10-_u672A_u5B8C_u5F85_u7EED_u3002_u3002_u3002_u3002_u3002"><a href="#10-_u672A_u5B8C_u5F85_u7EED_u3002_u3002_u3002_u3002_u3002" class="headerlink" title="10.未完待续。。。。。"></a>10.未完待续。。。。。</h4><hr>
+<p>参考：<br><a href="http://blog.csdn.net/guolin_blog/article/details/9316683" target="_blank" rel="external">http://blog.csdn.net/guolin_blog/article/details/9316683</a><br><a href="http://blog.csdn.net/guolin_blog/article/details/42238627" target="_blank" rel="external">http://blog.csdn.net/guolin_blog/article/details/42238627</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/内存优化/" rel="tag">#内存优化</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/01/20/android-multidex-problem/" rel="next" title="Android Multidex问题">
+                <i class="fa fa-chevron-left"></i> Android Multidex问题
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/04/android-handle-architecture/" rel="prev" title="Android Handler机制">
+                Android Handler机制 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <div class="ds-share flat" data-thread-key="2016/02/04/android_memory_optimize_tip/"
+     data-title="Android最佳性能实践—合理管理内存"
+     data-content=""
+     data-url="http://yourbadman.github.io/2016/02/04/android_memory_optimize_tip/">
+  <div class="ds-share-inline">
+    <ul  class="ds-share-icons-16">
+
+      <li data-toggle="ds-share-icons-more"><a class="ds-more" href="javascript:void(0);">分享到：</a></li>
+      <li><a class="ds-weibo" href="javascript:void(0);" data-service="weibo">微博</a></li>
+      <li><a class="ds-qzone" href="javascript:void(0);" data-service="qzone">QQ空间</a></li>
+      <li><a class="ds-qqt" href="javascript:void(0);" data-service="qqt">腾讯微博</a></li>
+      <li><a class="ds-wechat" href="javascript:void(0);" data-service="wechat">微信</a></li>
+
+    </ul>
+    <div class="ds-share-icons-more">
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+
+
+        </div>
+
+        
+
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
+
+        
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/02/04/android_memory_optimize_tip/"
+           data-title="Android最佳性能实践—合理管理内存" data-url="http://yourbadman.github.io/2016/02/04/android_memory_optimize_tip/">
+      </div>
+    
+  </div>
+
+
+      </div>
+
+      
+        
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/avatar.jpg" alt="JsonWong" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">JsonWong</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">记录每一天的成长!努力成为全栈工程师！</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">5</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            
+              <span class="site-state-item-count">0</span>
+              <span class="site-state-item-name">分类</span>
+              
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/Yourbadman" target="_blank">
+                  
+                    <i class="fa fa-globe"></i> github
+                  
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-_u5F53_u754C_u9762_u4E0D_u53EF_u89C1_u65F6_u91CA_u653E_u5185_u5B58"><span class="nav-number">1.</span> <span class="nav-text">1.当界面不可见时释放内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-_u8282_u5236_u5730_u4F7F_u7528Service"><span class="nav-number">2.</span> <span class="nav-text">2.节制地使用Service</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-_u5F53_u5185_u5B58_u7D27_u5F20_u65F6_u91CA_u653E_u5185_u5B58"><span class="nav-number">3.</span> <span class="nav-text">3.当内存紧张时释放内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-_u907F_u514D_u5728Bitmap_u4E0A_u6D6A_u8D39_u5185_u5B58"><span class="nav-number">4.</span> <span class="nav-text">4.避免在Bitmap上浪费内存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-_u4F7F_u7528_u4F18_u5316_u8FC7_u7684_u6570_u636E_u96C6_u5408"><span class="nav-number">5.</span> <span class="nav-text">5.使用优化过的数据集合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#6-_u77E5_u6653_u5185_u5B58_u7684_u5F00_u652F_u60C5_u51B5"><span class="nav-number">6.</span> <span class="nav-text">6.知晓内存的开支情况</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#7-_u8C28_u614E_u4F7F_u7528_u62BD_u8C61_u7F16_u7A0B"><span class="nav-number">7.</span> <span class="nav-text">7.谨慎使用抽象编程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#8-_u5C3D_u91CF_u907F_u514D_u4F7F_u7528_u4F9D_u8D56_u6CE8_u5165_u6846_u67B6"><span class="nav-number">8.</span> <span class="nav-text">8.尽量避免使用依赖注入框架</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#9-_u4F7F_u7528ProGuard_u7B80_u5316_u4EE3_u7801"><span class="nav-number">9.</span> <span class="nav-text">9.使用ProGuard简化代码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#10-_u672A_u5B8C_u5F85_u7EED_u3002_u3002_u3002_u3002_u3002"><span class="nav-number">10.</span> <span class="nav-text">10.未完待续。。。。。</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+      
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2012 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">JsonWong</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="#">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="#">
+    NexT.Mist
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"jsonwong"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+
+    
+  
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.2"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.2"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+<script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+<script type="text/javascript" src="/js/motion.js?v=0.4.5.2" id="motion.global"></script>
+
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.2" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    motionMiddleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  <script type="text/javascript" src="/js/bootstrap.js"></script>
+
+  
+  
+
+  
+  
+
+</body>
+</html>

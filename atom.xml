@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Not the alarm clock wake you up every day, is a dream！]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://yourbadman.github.io/"/>
-  <updated>2016-01-09T05:55:51.321Z</updated>
+  <updated>2016-06-05T03:47:10.913Z</updated>
   <id>http://yourbadman.github.io/</id>
   
   <author>
@@ -15,21 +15,298 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title><![CDATA[Android Handler机制]]></title>
+    <link href="http://yourbadman.github.io/2016/03/04/android-handle-architecture/"/>
+    <id>http://yourbadman.github.io/2016/03/04/android-handle-architecture/</id>
+    <published>2016-03-04T04:00:37.000Z</published>
+    <updated>2016-06-05T03:47:10.913Z</updated>
+    <content type="html"><![CDATA[<hr>
+<p>Android中有有许多的通讯机制，<strong>Binder</strong>(进程间通讯)/<strong>管道</strong>(poll/epoll)/<strong>Socket</strong>(zygote与system_service)/共享内存，各有特点；Android的<strong>UI线程</strong>与<strong>工作线程</strong>的分离,使得<strong>Handler</strong>机制孕育而生，显然，Handler适用线程与线程之间的通信；梳理了<strong>Handler/Looper/MessageQueue</strong>之间的关系，觉得吧，发现真正的苦力在<strong>MessageQueue</strong>（ps：native层的处理）,<strong>Handler</strong>是‘管理者’（ps:入口类）；</p>
+<blockquote>
+<p> 相关源码</p>
+</blockquote>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/</span>Handler.java</span><br><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/</span>Looper.java</span><br><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/M</span>essage.java</span><br><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/M</span>essageQueue.java</span><br><span class="line">libcore<span class="regexp">/luni/</span>src<span class="regexp">/main/</span>java<span class="regexp">/java/</span>lang<span class="regexp">/ThreadLocal.java</span></span><br></pre></td></tr></table></figure>
+<h3 id="I-Model"><a href="#I-Model" class="headerlink" title="I.Model"></a>I.Model</h3><ul>
+<li><strong>Message</strong> :  包含了两个int和一个object作为消息参数，一个what标识消息。</li>
+<li><strong>MessageQueu</strong> :  消息队列池。消息队列的主要功能向消息池<strong>投递消息</strong>(enqueueMessage)和<strong>取走消息池</strong>的消息(MessageQueue.next，阻塞式)；</li>
+<li><strong>Handler</strong> : 消息辅助类，发送各种消息事件（send<em> , post</em> , runWithScissors）</li>
+<li><strong>Looper</strong> :  死循环的取MessageQueue消息，prepare(),loop(),dispatchMessage()</li>
+<li><strong>ThreadLocal</strong> :  线程的本地变量，存储Looper，线程间独立存在，set(),get()进行存取。</li>
+<li><strong>结构图</strong><br><img src="/./images/handler-modle-all.jpg" alt="modle"></li>
+</ul>
+<h3 id="II-Handler_u521B_u5EFA_u3001_u53D1_u9001_u3001_u63A5_u6536_u8FC7_u7A0B"><a href="#II-Handler_u521B_u5EFA_u3001_u53D1_u9001_u3001_u63A5_u6536_u8FC7_u7A0B" class="headerlink" title="II.Handler创建、发送、接收过程"></a>II.Handler创建、发送、接收过程</h3><h4 id="Handler_u521B_u5EFA_u6240_u5728_u7EBF_u7A0B_28Looper_u6240_u5728_u7EBF_u7A0B_29"><a href="#Handler_u521B_u5EFA_u6240_u5728_u7EBF_u7A0B_28Looper_u6240_u5728_u7EBF_u7A0B_29" class="headerlink" title="Handler创建所在线程(Looper所在线程)"></a>Handler创建所在线程(Looper所在线程)</h4><p><img src="/./images/handler_create_map_1.png" alt="create_handler"></p>
+<h4 id="Handler_u53D1_u6D88_u606F_u6240_u5728_u7EBF_u7A0B"><a href="#Handler_u53D1_u6D88_u606F_u6240_u5728_u7EBF_u7A0B" class="headerlink" title="Handler发消息所在线程"></a>Handler发消息所在线程</h4><p><img src="/./images/handler_send_map_1.png" alt="send_message"></p>
+<h4 id="MessageQueue_u662F_u8FDE_u63A5Java_u5C42_u548CNative_u5C42_u7684_u7EBD_u5E26"><a href="#MessageQueue_u662F_u8FDE_u63A5Java_u5C42_u548CNative_u5C42_u7684_u7EBD_u5E26" class="headerlink" title="MessageQueue是连接Java层和Native层的纽带"></a>MessageQueue是连接Java层和Native层的纽带</h4><ul>
+<li><strong>nativePollOnece(long ptr, int timeoutMillis)</strong></li>
+<li><strong>nativeWake(long ptr)</strong></li>
+<li><strong>nativeDestroy(long ptr)</strong></li>
+<li><strong>nativeIsPolling(long ptr)</strong><blockquote>
+<p>传入的为<strong>MessageQueue#mPtr</strong>变量，<strong>MessageQueue</strong>通过<strong>mPtr</strong>变量保存<strong>NativeMessageQueue</strong>对象，从而使得<strong>MessageQueue</strong>成为<strong>Java</strong>层和<strong>Native</strong>层的枢纽，既能处理上层消息，也能处理<strong>native</strong>层消息；</p>
+</blockquote>
+</li>
+</ul>
+<p><img src="/./images/handler_arch.png" alt="handler_arch"></p>
+<ul>
+<li><strong>红色虚线关系</strong>：Java层和Native层的MessageQueue通过JNI建立关联，彼此之间能相互调用，搞明白这个互调关系，也就搞明白了Java如何调用C++代码，C++代码又是如何调用Java代码。</li>
+<li><strong>蓝色虚线关系</strong>：<strong>Handler/Looper/Message</strong>这三大类Java层与Native层并没有任何的真正关联，只是分别在Java层和Native层的handler消息模型中具有相似的功能。都是彼此独立的，各自实现相应的逻辑。</li>
+<li><strong>WeakMessageHandler</strong>继承于MessageHandler类，NativeMessageQueue继承于MessageQueue类</li>
+</ul>
+<h3 id="III-Handler_u63D0_u4F9B_u7684_u529F_u80FD"><a href="#III-Handler_u63D0_u4F9B_u7684_u529F_u80FD" class="headerlink" title="III.Handler提供的功能"></a>III.Handler提供的功能</h3><ul>
+<li><p>提供了<strong>send*</strong>,<strong>post*</strong>,<strong>remove*</strong>,此外还提供了<strong>runWithScissors</strong><br><strong>runWithScissors</strong>: 一个后台线程需要等待另一个线程的执行结果的时候的一种方式。</p>
+ <figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="function">WindowManagerService <span class="title">main</span><span class="params">(<span class="keyword">final</span> Context context,</span><br><span class="line">	            <span class="keyword">final</span> InputManagerService im,</span><br><span class="line">	            <span class="keyword">final</span> <span class="keyword">boolean</span> haveInputMethods, <span class="keyword">final</span> <span class="keyword">boolean</span> showBootMsgs,</span><br><span class="line">	            <span class="keyword">final</span> <span class="keyword">boolean</span> onlyCore)</span> </span>&#123;</span><br><span class="line">	        <span class="keyword">final</span> WindowManagerService[] holder = <span class="keyword">new</span> WindowManagerService[<span class="number">1</span>];</span><br><span class="line">	        DisplayThread.getHandler().runWithScissors(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">	            <span class="annotation">@Override</span></span><br><span class="line">	            <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	                holder[<span class="number">0</span>] = <span class="keyword">new</span> WindowManagerService(context, im,</span><br><span class="line">	                        haveInputMethods, showBootMsgs, onlyCore);</span><br><span class="line">	            &#125;</span><br><span class="line">	        &#125;, <span class="number">0</span>);</span><br><span class="line">	        <span class="keyword">return</span> holder[<span class="number">0</span>];</span><br><span class="line">	    &#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>WindowManagerService</strong>构造完成之后才能返回，否则如果连最重要的<strong>WMS</strong>都没有初始化成功 ，那么Androiｄ系统就没有继续进行下去的理由了。</p>
+</blockquote>
+<p><strong>需要注意的是</strong>：runWithScissors被标记为@hide，需要反射调用，或者重写BlockingRunnable类。<a href="http://www.jianshu.com/p/493cc5368a73" target="_blank" rel="external">详细例子</a></p>
+</li>
+<li><strong>Message</strong>的异步功能（默认情况为同步Message）,通过postSyncBarrier和removeSyncBarrier提供。</li>
+</ul>
+<h3 id="IV-Handler_u5E38_u89C1_u95EE_u9898_u53CA_u5E94_u7528_u573A_u666F"><a href="#IV-Handler_u5E38_u89C1_u95EE_u9898_u53CA_u5E94_u7528_u573A_u666F" class="headerlink" title="IV.Handler常见问题及应用场景"></a>IV.Handler常见问题及应用场景</h3><ol>
+<li>在非主线程发送消息时，按照<strong>Looper.prepare() -&gt;Handler.sendMessage/创建Handler -&gt; Looper.loop()</strong>执行。ps:在主线程中不用的原因，在于<strong>ActivityThread</strong>在执行<strong>main</strong>方法时已经执行了 <strong>Looper.prepareMainLooper()</strong>；</li>
+<li><p><strong>Handler</strong>可能导致内存泄漏，由于<strong>Handler</strong>有可能会被<strong>Looper#mQueue#mMessages#target</strong>引用，而很有可能由于消息还未到达处理的时刻，导致引用会被长期持有，如果<strong>Handler</strong>是一个<strong>非静态内部类</strong>，就会持有一个<strong>外部类实例</strong>的引用，进而导致外部类很有可能出现无法及时<strong>gc</strong>的问题。</p>
+<blockquote>
+<p><strong>直接静态化内部类</strong>，这样内部类<strong>Handler</strong>就不再持有外部类实例的引用，再在<strong>Handler</strong>的构造函数中以<strong>弱引用(当所指实例不存在强引用与软引用后，GC时会自动回弱引用指向的实例)</strong>传入外部类供使用即可。</p>
+</blockquote>
+</li>
+<li><p>为了对外提供绑定目标Handler对象的所有消息的<strong>暂停、恢复、废弃、取消</strong>所有队列中的消息，用于整个完全解耦消息队列的全局性有效管理。<a href="https://github.com/Jacksgong/MessageHandler/blob/master/README-zh.md" target="_blank" rel="external">查看github</a></p>
+</li>
+<li><a href="http://gityuan.com/2016/01/01/handler-message-usage/" target="_blank" rel="external">HandlerThread的原理</a>，在<strong>HandlerThread</strong>线程中运行<strong>Loop</strong>()方法，在其他线程中通过<strong>Handler</strong>发送消息到<strong>HandlerThread</strong>线程。通过<strong>wait/notifyAll</strong>的方式，有效地解决了<strong>多线程的同步问题</strong>。</li>
+<li><a href="http://www.cnblogs.com/benhero/p/4521727.html" target="_blank" rel="external">Handler 和 Timer 的比较</a>: 经常需要执行一些<strong>短周期的定时任务</strong>，这时候有两个选择<strong>Timer</strong>或者<strong>Handler</strong>。然而个人认为：Handler在多个方面比Timer更为优秀，更推荐使用。</li>
+</ol>
+<hr>
+<p><a href="http://blog.dreamtobe.cn/2016/03/11/android_handler_looper/" target="_blank" rel="external">http://blog.dreamtobe.cn/2016/03/11/android_handler_looper/</a><br><a href="http://gityuan.com/2015/12/27/handler-message-native/" target="_blank" rel="external">http://gityuan.com/2015/12/27/handler-message-native/</a><br><a href="http://gityuan.com/2015/12/26/handler-message-framework/" target="_blank" rel="external">http://gityuan.com/2015/12/26/handler-message-framework/</a><br><a href="http://blog.csdn.net/lmj623565791/article/details/38377229" target="_blank" rel="external">http://blog.csdn.net/lmj623565791/article/details/38377229</a><br><a href="http://androidtrainningcenter.blogspot.my/2013/12/handler-vs-timer-fixed-period-execution.html" target="_blank" rel="external">http://androidtrainningcenter.blogspot.my/2013/12/handler-vs-timer-fixed-period-execution.html</a><br><a href="http://www.jianshu.com/p/493cc5368a73" target="_blank" rel="external">http://www.jianshu.com/p/493cc5368a73</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<hr>
+<p>Android中有有许多的通讯机制，<strong>Binder</strong>(进程间通讯)/<strong>管道</strong>(poll/epoll)/<strong>Socket</strong>(zygote与system_service)/共享内存]]>
+    </summary>
+    
+      <category term="Android" scheme="http://yourbadman.github.io/tags/Android/"/>
+    
+      <category term="Handle" scheme="http://yourbadman.github.io/tags/Handle/"/>
+    
+      <category term="Looper" scheme="http://yourbadman.github.io/tags/Looper/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[Android最佳性能实践—合理管理内存]]></title>
+    <link href="http://yourbadman.github.io/2016/02/04/android_memory_optimize_tip/"/>
+    <id>http://yourbadman.github.io/2016/02/04/android_memory_optimize_tip/</id>
+    <published>2016-02-04T04:23:37.000Z</published>
+    <updated>2016-02-15T10:02:18.685Z</updated>
+    <content type="html"><![CDATA[<hr>
+<blockquote>
+<p>合理有效的内存管理大大提高性能，以下将整理优化内存的方法及注意事项。</p>
+</blockquote>
+<h4 id="1-_u5F53_u754C_u9762_u4E0D_u53EF_u89C1_u65F6_u91CA_u653E_u5185_u5B58"><a href="#1-_u5F53_u754C_u9762_u4E0D_u53EF_u89C1_u65F6_u91CA_u653E_u5185_u5B58" class="headerlink" title="1.当界面不可见时释放内存"></a>1.当界面不可见时释放内存</h4><p>  当用户打开了另外一个程序，我们的程序界面已经不再可见的时候，我们应当将所有和界面相关的资源进行释放。在这种场景下释放资源可以让系统缓存后台进程的能力显著增加，因此也会让用户体验变得更好。<br>那么我们如何才能知道程序界面是不是已经不可见了呢？其实很简单，只需要在<strong>Activity</strong>中重写<strong>onTrimMemory()</strong>方法，然后在这个方法中监听<strong>TRIM_MEMORY_UI_HIDDEN</strong>这个级别，一旦触发了之后就说明用户已经离开了我们的程序，那么此时就可以进行资源释放操作了，如下所示：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Override</span>  </span><br><span class="line"><span class="keyword">public</span> <span class="typename">void</span> onTrimMemory(<span class="typename">int</span> level) &#123;  </span><br><span class="line">    <span class="keyword">super</span>.onTrimMemory(level);  </span><br><span class="line">    <span class="keyword">switch</span> (level) &#123;  </span><br><span class="line">    <span class="keyword">case</span> <span class="string">TRIM_MEMORY_UI_HIDDEN:</span>  </span><br><span class="line">        <span class="comment">// 进行资源释放操作  </span></span><br><span class="line">        <span class="keyword">break</span>;  </span><br><span class="line">    &#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意:<strong>onTrimMemory()方法中的TRIM_MEMORY_UI_HIDDEN回调只有当我们程序中的所有UI组件全部不可见的时候才会触发，这和onStop()方法还是有很大区别的，因为onStop()方法只是当一个Activity完全不可见的时候就会调用</strong>，比如说用户打开了我们程序中的另一个Activity。因此，我们可以在<strong>onStop</strong>()方法中去释放一些Activity相关的资源，比如说取消网络连接或者注销广播接收器等，但是像UI相关的资源应该一直要等到<strong>onTrimMemory</strong>(<strong>TRIM_MEMORY_UI_HIDDEN</strong>)这个回调之后才去释放，这样可以保证如果用户只是从我们程序的一个Activity回到了另外一个Activity，界面相关的资源都不需要重新加载，从而提升响应速度。</p>
+<h4 id="2-_u8282_u5236_u5730_u4F7F_u7528Service"><a href="#2-_u8282_u5236_u5730_u4F7F_u7528Service" class="headerlink" title="2.节制地使用Service"></a>2.节制地使用Service</h4><p>如果应用程序当中需要使用Service来执行后台任务的话，请一定要注意只有当任务正在执行的时候才应该让Service运行起来。另外，<strong>当任务执行完之后去停止Service的时候，要小心Service停止失败导致内存泄漏的情况</strong>。<br>当我们启动一个Service时，系统会倾向于将这个Service所依赖的进程进行保留，这样就会导致这个进程变得非常消耗内存。并且，<strong>系统可以在LRU cache当中缓存的进程数量也会减少，导致切换应用程序的时候耗费更多性能</strong>。严重的话，甚至有可能会导致崩溃，因为系统在内存非常吃紧的时候可能已无法维护所有正在运行的Service所依赖的进程了。<br><strong>推荐使用：</strong><br><strong>为了能够控制Service的生命周期，Android官方推荐的最佳解决方案就是使用IntentService，这种Service的最大特点就是当后台任务执行结束后会自动停止，从而极大程度上避免了Service内存泄漏的可能性</strong></p>
+<h4 id="3-_u5F53_u5185_u5B58_u7D27_u5F20_u65F6_u91CA_u653E_u5185_u5B58"><a href="#3-_u5F53_u5185_u5B58_u7D27_u5F20_u65F6_u91CA_u653E_u5185_u5B58" class="headerlink" title="3.当内存紧张时释放内存"></a>3.当内存紧张时释放内存</h4><p>除了刚才讲的<strong>TRIM_MEMORY_UI_HIDDEN</strong>这个回调，<strong>onTrimMemory</strong>()方法还有很多种其它类型的回调，可以在手机内存降低的时候及时通知我们。我们应该根据回调中传入的级别来去决定如何释放应用程序的资源：</p>
+<ul>
+<li><strong>TRIM_MEMORY_RUNNING_MODERATE</strong>    表示应用程序正常运行，并且不会被杀掉。但是目前手机的内存已经有点低了，系统可能会开始根据LRU缓存规则来去杀死进程了。</li>
+<li><strong>TRIM_MEMORY_RUNNING_LOW</strong>    表示应用程序正常运行，并且不会被杀掉。但是目前手机的内存已经非常低了，我们应该去释放掉一些不必要的资源以提升系统的性能，同时这也会直接影响到我们应用程序的性能。</li>
+<li><strong>TRIM_MEMORY_RUNNING_CRITICAL</strong>    表示应用程序仍然正常运行，但是系统已经根据LRU缓存规则杀掉了大部分缓存的进程了。这个时候我们应当尽可能地去释放任何不必要的资源，不然的话系统可能会继续杀掉所有缓存中的进程，并且开始杀掉一些本来应当保持运行的进程，比如说后台运行的服务。</li>
+</ul>
+<p><strong>以上是当我们的应用程序正在运行时的回调，那么如果我们的程序目前是被缓存的，则会收到以下几种类型的回调：</strong></p>
+<ul>
+<li><strong>TRIM_MEMORY_BACKGROUND</strong>    表示手机目前内存已经很低了，系统准备开始根据LRU缓存来清理进程。这个时候我们的程序在LRU缓存列表的最近位置，是不太可能被清理掉的，但这时去释放掉一些比较容易恢复的资源能够让手机的内存变得比较充足，从而让我们的程序更长时间地保留在缓存当中，这样当用户返回我们的程序时会感觉非常顺畅，而不是经历了一次重新启动的过程。</li>
+<li><strong>TRIM_MEMORY_MODERATE</strong>    表示手机目前内存已经很低了，并且我们的程序处于LRU缓存列表的中间位置，如果手机内存还得不到进一步释放的话，那么我们的程序就有被系统杀掉的风险了。</li>
+<li><strong>TRIM_MEMORY_COMPLETE</strong>    表示手机目前内存已经很低了，并且我们的程序处于LRU缓存列表的最边缘位置，系统会最优先考虑杀掉我们的应用程序，在这个时候应当尽可能地把一切可以释放的东西都进行释放。</li>
+</ul>
+<h4 id="4-_u907F_u514D_u5728Bitmap_u4E0A_u6D6A_u8D39_u5185_u5B58"><a href="#4-_u907F_u514D_u5728Bitmap_u4E0A_u6D6A_u8D39_u5185_u5B58" class="headerlink" title="4.避免在Bitmap上浪费内存"></a>4.避免在Bitmap上浪费内存</h4><p>前言：<strong>将一张图片解析成一个Bitmap对象时所占用的内存并不是这个图片在硬盘中的大小，可能一张图片只有100k你觉得它并不大，但是读取到内存当中是按照像素点来算的，比如这张图片是1500<em>1000像素，使用的ARGB_8888颜色类型，那么每个像素点就会占用4个字节，总内存就是1500</em>1000*4字节，也就是5.7M，这个数据看起来就比较恐怖了。</strong></p>
+<p>在展示高分辨率图片的时候，最好先将图片进行压缩。压缩后的图片大小应该和用来展示它的控件大小相近，在一个很小的ImageView上显示一张超大的图片不会带来任何视觉上的好处，但却会占用我们相当多宝贵的内存，而且在性能上还可能会带来负面影响。（ps:BitmapFactory.Options options.inSampleSize按比例缩小）</p>
+<h4 id="5-_u4F7F_u7528_u4F18_u5316_u8FC7_u7684_u6570_u636E_u96C6_u5408"><a href="#5-_u4F7F_u7528_u4F18_u5316_u8FC7_u7684_u6570_u636E_u96C6_u5408" class="headerlink" title="5.使用优化过的数据集合"></a>5.使用优化过的数据集合</h4><p>Android API当中提供了一些优化过后的数据集合工具类，如<strong>SparseArray</strong>，<strong>SparseBooleanArray</strong>，以及<strong>LongSparseArray</strong>等，使用这些API可以让我们的程序更加高效。传统Java API中提供的HashMap工具类会相对比较低效，因为它需要为每一个键值对都提供一个对象入口，而<strong>SparseArray就避免掉了基本数据类型转换成对象数据类型的时间</strong>。</p>
+<h4 id="6-_u77E5_u6653_u5185_u5B58_u7684_u5F00_u652F_u60C5_u51B5"><a href="#6-_u77E5_u6653_u5185_u5B58_u7684_u5F00_u652F_u60C5_u51B5" class="headerlink" title="6.知晓内存的开支情况"></a>6.知晓内存的开支情况</h4><ul>
+<li>使用<strong>枚举</strong>通常会比使用静态常量要<strong>消耗两倍以上的内存</strong>，在Android开发当中我们应当尽可能地不使用枚举。</li>
+<li>任何一个Java类，包括内部类、匿名类，都要占用大概<strong>500字节的内存空间</strong>。</li>
+<li>任何一个类的实例要消耗<strong>12-16字节</strong>的内存开支，因此频繁创建实例也是会一定程序上影响内存的。</li>
+<li>在使用<strong>HashMap</strong>时，即使你只设置了一个基本数据类型的键，比如说int，但是也会按照对象的大小来分配内存，大概是32字节，而不是4字节。因此最好的办法就是像上面所说的一样，<strong>使用优化过的数据集合</strong>。</li>
+</ul>
+<h4 id="7-_u8C28_u614E_u4F7F_u7528_u62BD_u8C61_u7F16_u7A0B"><a href="#7-_u8C28_u614E_u4F7F_u7528_u62BD_u8C61_u7F16_u7A0B" class="headerlink" title="7.谨慎使用抽象编程"></a>7.谨慎使用抽象编程</h4><p>在Android上使用抽象会带来额外的内存开支，因为抽象的编程方法需要编写额外的代码，虽然这些代码根本执行不到，但是却也要映射到内存当中，不仅占用了更多的内存，在执行效率方面也会有所降低。</p>
+<h4 id="8-_u5C3D_u91CF_u907F_u514D_u4F7F_u7528_u4F9D_u8D56_u6CE8_u5165_u6846_u67B6"><a href="#8-_u5C3D_u91CF_u907F_u514D_u4F7F_u7528_u4F9D_u8D56_u6CE8_u5165_u6846_u67B6" class="headerlink" title="8.尽量避免使用依赖注入框架"></a>8.尽量避免使用依赖注入框架</h4><p>注入框架的实现原理基本可以参照<a href="http://www.jsonwong.cn/2016/01/14/android_annotation/" target="_blank" rel="external">Andorid的ORM中注解框架原理</a>，虽然可以大大提高开发速度，但是追求完美的码农显然不能接受其在速度和内存上的开销。</p>
+<h4 id="9-_u4F7F_u7528ProGuard_u7B80_u5316_u4EE3_u7801"><a href="#9-_u4F7F_u7528ProGuard_u7B80_u5316_u4EE3_u7801" class="headerlink" title="9.使用ProGuard简化代码"></a>9.使用ProGuard简化代码</h4><p><strong>ProGuard</strong>相信大家都不会陌生，很多人都会使用这个工具来混淆代码，但是除了混淆之外，它还具有压缩和优化代码的功能。ProGuard会对我们的代码进行检索，删除一些无用的代码，并且会对类、字段、方法等进行重命名，重命名之后的类、字段和方法名都会比原来简短很多，这样的话也就对内存的占用变得更少了。</p>
+<h4 id="10-_u672A_u5B8C_u5F85_u7EED_u3002_u3002_u3002_u3002_u3002"><a href="#10-_u672A_u5B8C_u5F85_u7EED_u3002_u3002_u3002_u3002_u3002" class="headerlink" title="10.未完待续。。。。。"></a>10.未完待续。。。。。</h4><hr>
+<p>参考：<br><a href="http://blog.csdn.net/guolin_blog/article/details/9316683" target="_blank" rel="external">http://blog.csdn.net/guolin_blog/article/details/9316683</a><br><a href="http://blog.csdn.net/guolin_blog/article/details/42238627" target="_blank" rel="external">http://blog.csdn.net/guolin_blog/article/details/42238627</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<hr>
+<blockquote>
+<p>合理有效的内存管理大大提高性能，以下将整理优化内存的方法及注意事项。</p>
+</blockquote>
+<h4 id="1-_u5F53_u754C_u9762_u4E0D_u53EF_u89C1_u65F6_u91CA_u653E_u]]>
+    </summary>
+    
+      <category term="Android" scheme="http://yourbadman.github.io/tags/Android/"/>
+    
+      <category term="内存优化" scheme="http://yourbadman.github.io/tags/%E5%86%85%E5%AD%98%E4%BC%98%E5%8C%96/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[Android Multidex问题]]></title>
+    <link href="http://yourbadman.github.io/2016/01/20/android-multidex-problem/"/>
+    <id>http://yourbadman.github.io/2016/01/20/android-multidex-problem/</id>
+    <published>2016-01-19T16:00:00.000Z</published>
+    <updated>2016-01-23T08:22:13.260Z</updated>
+    <content type="html"><![CDATA[<blockquote>
+<p>当一个<strong>Android</strong>应用的方法超过<strong>65K</strong>的时候你可能就会发现问题（可能你代码进行了<strong>混淆</strong>，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在Android的社区一次一次的被讨论，问题的解决方法就是Multidex，将代码打包为多dex。在<strong>Google</strong>用<strong>multidex</strong>完美解决了，但是我发现了一个很明显的问题：就是在App启动时速度明显变慢了。写这篇文章的目的在于帮助那些没有听过<strong>Mutildex</strong>带来的影响和想要知道如何解决<strong>Mutildex</strong>问题的开发者。</p>
+</blockquote>
+<h4 id="u524D_u6CBF"><a href="#u524D_u6CBF" class="headerlink" title="前沿"></a>前沿</h4><blockquote>
+<p>对于初学者而言，首先应该了解什么是.dex文件，以及<strong>Andoird apk</strong>的打包<strong>流程</strong>：</p>
+</blockquote>
+<p><img src="/./images/android_pack_apk.png" alt="Android apk编译过程"></p>
+<blockquote>
+<p>简单的说：.java文件会被<strong>javac</strong>编译为.class文件（<strong>基于栈虚拟机</strong>），交叉编译为.dex文件（<strong>基于寄存器虚拟机</strong>），然后再和所需的资源打包为<strong>apk</strong>,在编译为.dex过程中，会限制.dex的方法数，尽管Google解决了这个限制（MultiDex）,但是可能会引发App启动的性能问题（多dex的加载比较耗时）和方法访问问题。</p>
+</blockquote>
+<h4 id="u8BBE_u7F6EMultiDex"><a href="#u8BBE_u7F6EMultiDex" class="headerlink" title="设置MultiDex"></a>设置MultiDex</h4><p>MultiDex的方案已经很成熟了，可以参考官网的<a href="http://developer.android.com/tools/building/multidex.html#mdex-gradle" target="_blank" rel="external">MultiDex配置</a>，也可以参考我的<a href="https://github.com/Yourbadman/multidex-sample" target="_blank" rel="external">Demo</a></p>
+<h4 id="NoClassDefFoundError"><a href="#NoClassDefFoundError" class="headerlink" title="NoClassDefFoundError"></a>NoClassDefFoundError</h4><p>当设置了MultiDex可能会出现这个问题，<strong>java.lang.NoClassDefFoundError</strong> 。<strong>AndroidStudio</strong>中打包需要用<strong>Gradle</strong>且要求AndroidSDK的版本大于<strong>21.1</strong>，<strong>Proguard</strong>后，后再<strong>[buildDir]/intermediates/multi-dex/[buildType]/maindexlist.txt</strong>找到启动所需的<strong>.class</strong>文件，但是这个文件并非完全正确，可能会确实启动所需的<strong>.class</strong>文件，所以需要手动的添加，在下面会介绍如何添加<strong>.class</strong>文件。</p>
+<h4 id="u89E3_u51B3NoClassDefFoundError_u95EE_u9898"><a href="#u89E3_u51B3NoClassDefFoundError_u95EE_u9898" class="headerlink" title="解决NoClassDefFoundError问题"></a>解决NoClassDefFoundError问题</h4><ul>
+<li>在你的项目中添加<strong>multidex.keep</strong>；</li>
+<li>将出现<strong>NoClassDefFoundError</strong>的完整类名添加到文件中；</li>
+<li>在你的项目中的<strong>build.gradle</strong>文件中添加以下的脚本。这个脚本的作用是将<strong>multidex.keep</strong>中的内容和<strong>gradle</strong>自动生成的<strong>maindexlist.txt</strong>组合然后再编译，这样就可以将缺失的.class文件编译了。</li>
+</ul>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">android &#123;</span><br><span class="line">    compileSdkVersion <span class="number">23</span></span><br><span class="line">    buildToolsVersion <span class="string">"23.0.1"</span></span><br><span class="line"></span><br><span class="line">    defaultConfig &#123;</span><br><span class="line">        applicationId <span class="string">"com.github.mmadev.multidexsample"</span></span><br><span class="line">        minSdkVersion <span class="number">16</span></span><br><span class="line">        targetSdkVersion <span class="number">23</span></span><br><span class="line">        versionCode <span class="number">1</span></span><br><span class="line">        versionName <span class="string">"1.0"</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">//开启MultiDex</span></span><br><span class="line">        multiDexEnabled <span class="keyword">true</span></span><br><span class="line">    &#125;</span><br><span class="line">    buildTypes &#123;</span><br><span class="line">        release &#123;</span><br><span class="line">            minifyEnabled <span class="keyword">true</span></span><br><span class="line">            proguardFiles getDefaultProguardFile(<span class="string">'proguard-android.txt'</span>)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">dependencies</span> &#123;</span><br><span class="line">    <span class="keyword">compile</span> <span class="keyword">fileTree</span>(dir: <span class="string">'libs'</span>, <span class="keyword">include</span>: [<span class="string">'*.jar'</span>])</span><br><span class="line">    <span class="keyword">compile</span> <span class="string">'com.android.support:multidex:1.0.1'</span></span><br><span class="line">    <span class="keyword">compile</span> <span class="string">"com.android.support:support-v4:23.0.1"</span></span><br><span class="line">&#125;</span><br><span class="line">android.applicationVariants.all &#123; variant -&gt;</span><br><span class="line">    <span class="keyword">task</span> <span class="string">"fix$&#123;variant.name.capitalize()&#125;MainDexClassList"</span> &lt;&lt; &#123;</span><br><span class="line">        logger.info <span class="string">"Fixing main dex keep file for $variant.name"</span></span><br><span class="line">        <span class="keyword">File</span> keepFile = <span class="keyword">new</span> <span class="keyword">File</span>(<span class="string">"$buildDir/intermediates/multi-dex/$variant.buildType.name/maindexlist.txt"</span>)</span><br><span class="line">        keepFile.<span class="keyword">withWriterAppend</span> &#123; w -&gt;</span><br><span class="line">            <span class="comment">// 获取输入的文件</span></span><br><span class="line">            w.<span class="keyword">append</span>(<span class="string">'\n'</span>)</span><br><span class="line">            <span class="keyword">new</span> <span class="keyword">File</span>(<span class="string">"$&#123;projectDir&#125;/multidex.keep"</span>).<span class="keyword">withReader</span> &#123; r -&gt;</span><br><span class="line">                <span class="comment">// 写入文件</span></span><br><span class="line">                w &lt;&lt; r &lt;&lt; <span class="string">'\n'</span></span><br><span class="line">            &#125;</span><br><span class="line">            logger.info <span class="string">"Updated main dex keep file for $&#123;keepFile.getAbsolutePath()&#125;\n$keepFile.text"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">tasks.whenTaskAdded &#123; <span class="keyword">task</span> -&gt;</span><br><span class="line">    android.applicationVariants.all &#123; variant -&gt;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">task</span>.name == <span class="string">"create$&#123;variant.name.capitalize()&#125;MainDexClassList"</span>) &#123;</span><br><span class="line">            <span class="keyword">task</span>.finalizedBy <span class="string">"fix$&#123;variant.name.capitalize()&#125;MainDexClassList"</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="MultiDex_u6240_u5E26_u6765_u7684_u6027_u80FD_u5F71_u54CD"><a href="#MultiDex_u6240_u5E26_u6765_u7684_u6027_u80FD_u5F71_u54CD" class="headerlink" title="MultiDex所带来的性能影响"></a>MultiDex所带来的性能影响</h4><p>前面已经提及如何配置MultiDex,现在来提提其影响，会拖慢App启动时间大约15%，当然如果dex越大，启动时间就越长。</p>
+<h4 id="u89E3_u51B3multidex_u5E94_u7528_u542F_u52A8_u6027_u80FD_u7684_u5F71_u54CD"><a href="#u89E3_u51B3multidex_u5E94_u7528_u542F_u52A8_u6027_u80FD_u7684_u5F71_u54CD" class="headerlink" title="解决multidex应用启动性能的影响"></a>解决multidex应用启动性能的影响</h4><ul>
+<li><a href="https://medium.com/@Macarse/lazy-loading-dex-files-d41f6f37df0e#.fsjm3hf9c" target="_blank" rel="external">懒加载Dex文件</a>可以加速启动速度，但是内存会变大。</li>
+<li>应用启动时的运行时检查后，去加载首页中需要加载用其他Dex中的类（<strong>ClassLoader</strong>提供支持），然后添加到<strong>multidex.keep</strong>中。</li>
+</ul>
+<figure class="highlight dart"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">           <span class="keyword">final</span> <span class="built_in">List</span>&lt;<span class="built_in">String</span>&gt; externalDexClasses = getExternalDexClasses(context);</span><br><span class="line">           <span class="keyword">if</span> (externalDexClasses != <span class="keyword">null</span> &amp;&amp; !externalDexClasses.isEmpty()) &#123;</span><br><span class="line">               <span class="keyword">final</span> ArrayList&lt;<span class="built_in">String</span>&gt; classList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">               <span class="keyword">final</span> java.lang.reflect.Method m = ClassLoader.<span class="keyword">class</span>.getDeclaredMethod(<span class="string">"findLoadedClass"</span>, <span class="keyword">new</span> Class[]&#123;<span class="built_in">String</span>.<span class="keyword">class</span>&#125;);</span><br><span class="line">               m.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">               <span class="keyword">final</span> ClassLoader cl = context.getClassLoader();</span><br><span class="line">               <span class="keyword">for</span> (<span class="built_in">String</span> clazz : externalDexClasses) &#123;</span><br><span class="line">                   <span class="keyword">if</span> (m.invoke(cl, clazz) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                       classList.add(clazz.replaceAll(<span class="string">"\\."</span>, <span class="string">"/"</span>).replaceAll(<span class="string">"$"</span>, <span class="string">".class"</span>));</span><br><span class="line">                   &#125;</span><br><span class="line">               &#125;</span><br><span class="line">               <span class="keyword">return</span> classList;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">           e.printStackTrace();</span><br><span class="line">       &#125;</span><br></pre></td></tr></table></figure>
+<p><strong>详情<a href="https://github.com/Yourbadman/multidex-sample" target="_blank" rel="external">Demo</a> </strong></p>
+<ul>
+<li>调用<strong>MultiDexUtils.getLoadedExternalDexClasses</strong> 方法获取需要的类列表。</li>
+<li>将获取到的列表添加到<strong>multidex.keep</strong>中。</li>
+</ul>
+<h4 id="u7ED3_u679C"><a href="#u7ED3_u679C" class="headerlink" title="结果"></a>结果</h4><p>直接上图吧。<br><img src="/./images/android-multidex-start-compare-time.png" alt="compare-time"></p>
+<h4 id="u7ED3_u8BBA"><a href="#u7ED3_u8BBA" class="headerlink" title="结论"></a>结论</h4><p>MultiDex会引发很多的问题，建议在代码超过65k再去考虑多Dex,在此之前，可以利用代码重构减少一部分的代码或者删除无用的方法。</p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<blockquote>
+<p>当一个<strong>Android</strong>应用的方法超过<strong>65K</strong>的时候你可能就会发现问题（可能你代码进行了<strong>混淆</strong>，编译器将不需要的方法丢弃，从而减少了代码）。这个问题在An]]>
+    </summary>
+    
+      <category term="Android" scheme="http://yourbadman.github.io/tags/Android/"/>
+    
+      <category term="Multidex" scheme="http://yourbadman.github.io/tags/Multidex/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[Andorid的ORM中注解框架原理]]></title>
+    <link href="http://yourbadman.github.io/2016/01/14/android_annotation/"/>
+    <id>http://yourbadman.github.io/2016/01/14/android_annotation/</id>
+    <published>2016-01-13T16:00:00.000Z</published>
+    <updated>2016-01-14T09:04:20.894Z</updated>
+    <content type="html"><![CDATA[<p>Java中的<strong>注解(Annotation)</strong>是一个很神奇的东西，特别现在有很多Android库都是使用注解的方式来实现的，以下简单介绍<strong>Annotation</strong>的原理，以及实现一个注解处理器的流程。</p>
+<h3 id="I-_u80CC_u666F"><a href="#I-_u80CC_u666F" class="headerlink" title="I.背景"></a>I.背景</h3><blockquote>
+<p>ORM（Object Relational Mapping）框架采用元数据来描述对象一关系映射细节，元数据一般采用XML格式，并且存放在专门的对象一映射文件中。<br>说白了就是配置系统的信息，以前用XML配置基础信息，来符合开闭原则，但是随着XML文件的增大，XML变得很臃肿和难以维护，注解就是在这种背景产生的。</p>
+</blockquote>
+<p>Annotation的作用：<br>1.代码的标识作用，能被编译器识别，提示Coder；比如：Override,SuppressWarnings， and so forth;<br>2.编译和部署阶段生成配置信息；<br>3.注解的信息可以作用于运行阶段，动态添加基本信息。</p>
+<p>从JDK5开始，Java增加了Annotation(注解)<br><a href="http://docs.oracle.com/javase/tutorial/java/annotations/index.html" target="_blank" rel="external">官方Annotation的解释</a></p>
+<h3 id="II-Annotation_u7684_u57FA_u672C_u4F7F_u7528_3A"><a href="#II-Annotation_u7684_u57FA_u672C_u4F7F_u7528_3A" class="headerlink" title="II.Annotation的基本使用:"></a>II.Annotation的基本使用:</h3><h4 id="1-__u5B9A_u4E49_u4E00_u4E2AAnnotation_uFF0C_u4F7F_u7528_u5173_u952E_u5B57@interface"><a href="#1-__u5B9A_u4E49_u4E00_u4E2AAnnotation_uFF0C_u4F7F_u7528_u5173_u952E_u5B57@interface" class="headerlink" title="1. 定义一个Annotation，使用关键字@interface"></a>1. 定义一个Annotation，使用关键字@interface</h4><ul>
+<li><p>声明成员变量，（ 以“无形参的方法”形式来声明），默认的值的关键字为default<br>如：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> @<span class="keyword">interface</span> <span class="title">Test</span>&#123;</span><br><span class="line">    <span class="function">String <span class="title">name</span>(<span class="params"></span>)</span>;</span><br><span class="line">     <span class="function"><span class="keyword">int</span> <span class="title">value</span>(<span class="params"></span>)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>基本使用    </p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Demo</span>&#123;</span><br><span class="line">    @Test(name=<span class="string">"this is test name"</span> , <span class="keyword">value</span>=<span class="number">12</span>)</span><br><span class="line">     <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">     &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h5 id="2-_Annotation_u7684_u57FA_u672C_u6982_u5FF5_uFF1A"><a href="#2-_Annotation_u7684_u57FA_u672C_u6982_u5FF5_uFF1A" class="headerlink" title="2. Annotation的基本概念："></a>2. Annotation的基本概念：</h5><blockquote>
+<p><strong>元注解</strong></p>
+</blockquote>
+<ul>
+<li><strong>@Retention</strong>  Retention用于指定Annotation的作用范围， 一个名为“value”的成员变量，该value成员变量是RetentionPolicy枚举类型，以下是枚举类型：<ul>
+<li><strong>RetentionPolicy.SOURCE</strong>：Annotation只保留在源代码中，编译器编译时，直接丢弃这种Annotation。</li>
+<li><strong>RetentionPolicy.CLASS</strong>：编译器把Annotation记录在class文件中。当运行Java程序时，JVM中不再保留该Annotation。</li>
+<li><strong>RetentionPolicy.RUNTIME</strong>：编译器把Annotation记录在class文件中。当运行Java程序时，JVM会保留该Annotation，程序可以通过反射获取该Annotation的信息。</li>
+</ul>
+</li>
+<li><strong>@Target</strong>   Target指定Annotation用于修饰哪些程序元素， 包含一个名为”value“的成员变量，该value成员变量类型为ElementType[ ]，<strong>ElementType</strong>为枚举类型<ul>
+<li><strong>ElementType.TYPE</strong>：能修饰类、接口或枚举类型</li>
+<li><strong>ElementType.FIELD</strong>：能修饰成员变量</li>
+<li><strong>ElementType.METHOD</strong>：能修饰方法</li>
+<li><strong>ElementType.PARAMETER</strong>：能修饰参数</li>
+<li><strong>ElementType.CONSTRUCTOR</strong>：能修饰构造器</li>
+<li><strong>ElementType.LOCAL_VARIABLE</strong>：能修饰局部变量</li>
+<li><strong>ElementType.ANNOTATION_TYPE</strong>：能修饰注解</li>
+<li><strong>ElementType.PACKAGE</strong>：能修饰包</li>
+</ul>
+</li>
+<li><strong>@Documented</strong>  <strong>javadoc</strong>命令生成API文档后，所有使用注解A修饰的程序元素，将会包含注解A的说明。</li>
+<li><strong>@Inherited</strong>  声明此关键字，注解可以被继承</li>
+<li><strong>@Repeatable</strong> JAVA SE 8才会提供的，定时重复</li>
+</ul>
+<h3 id="III-Android_u6CE8_u89E3_u5904_u7406_u5668"><a href="#III-Android_u6CE8_u89E3_u5904_u7406_u5668" class="headerlink" title="III.Android注解处理器"></a>III.Android注解处理器</h3><blockquote>
+<p><strong>注解处理器</strong>（Annotation Processor）是javac的一个工具，它用来在编译时扫描和处理注解（Annotation）。</p>
+</blockquote>
+<p><strong>原理</strong></p>
+<blockquote>
+<p><strong>注解器的使用可以提高开发效率，自定义一个注解处理器并没有那么容易(比如:ButtonKnife)。注解可以在编译时(Compile Time)或者运行时（Run time）生效。javac会在编译时扫描和处理Annotion，可以注册对应的注解器生成自定义格式的java文件（注意会另外的生成java文件，然后再编译为.class文件，同时存在这两个文件），然后通过反射调用，就可以执行注解内容。</strong></p>
+</blockquote>
+<h3 id="IV-_u81EA_u5B9A_u4E49_u6CE8_u89E3_u5668"><a href="#IV-_u81EA_u5B9A_u4E49_u6CE8_u89E3_u5668" class="headerlink" title="IV.自定义注解器"></a>IV.自定义注解器</h3><h5 id="jar_u5305_u4E2D_u914D_u7F6E"><a href="#jar_u5305_u4E2D_u914D_u7F6E" class="headerlink" title="jar包中配置"></a>jar包中配置</h5><blockquote>
+<p>在Meta-Info中配置service/javax.annotation.processing.Processor文件，文件里添加自定义的Processor的完整类名路径。</p>
+</blockquote>
+<h5 id="u5B9E_u73B0_u81EA_u5B9A_u4E49_u7684Processor"><a href="#u5B9E_u73B0_u81EA_u5B9A_u4E49_u7684Processor" class="headerlink" title="实现自定义的Processor"></a>实现自定义的Processor</h5><ul>
+<li><strong>init(ProcessingEnvironment env)</strong>: 每一个注解处理器类都必须有一个空的构造函数。然而，这里有一个特殊的<strong>init()</strong>方法，它会被注解处理工具调用，并输入<strong>ProcessingEnviroment</strong>参数。<strong>ProcessingEnviroment</strong>提供很多有用的工具类<strong>Elements</strong>, <strong>Types</strong>和<strong>Filer</strong>.</li>
+<li><strong>process(Set&lt;? extends TypeElement&gt; annotations, RoundEnvironment env)</strong>: 这相当于每个处理器的主函数main()。你在这里写你的扫描、评估和处理注解的代码，以及<strong>生成Java文件</strong>。输入参数<strong>RoundEnviroment</strong>，可以让你查询出包含特定注解的被注解元素。</li>
+<li><strong>getSupportedAnnotationTypes()</strong>: 这里你必须指定，这个注解处理器是注册给哪个注解的。注意，它的返回值是一个字符串的集合，包含本处理器想要处理的注解类型的合法全称。换句话说，你在这里定义你的注解处理器注册到哪些注解上。</li>
+<li><strong>getSupportedSourceVersion()</strong>: 用来指定你使用的Java版本。通常这里返回<strong>SourceVersion.latestSupported()</strong>。然而，如果你有足够的理由只支持Java 6的话，你也可以返回<strong>SourceVersion.RELEASE_6</strong>。我推荐你使用前者。</li>
+</ul>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">init</span><span class="params">(ProcessingEnvironment env)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span> .init(env);</span><br><span class="line">    <span class="keyword">this</span>.elementUtils = env.getElementUtils() ;</span><br><span class="line">    <span class="keyword">this</span>.typeUtils = env.getTypeUtils() ;</span><br><span class="line">    <span class="keyword">this</span>.filer = env.getFiler() ;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>Elements</strong>和<strong>TypeMirrors</strong><br>在上面的<strong>init()</strong>中我们获得如下引用：</p>
+<pre><code>* **Elements**：一个用来处理Element的工具类；
+* **Types**：一个用来处理TypeMirror的工具类；
+* **Filer**：使用Filer你可以创建文件。
+</code></pre><p>在注解处理过程中，我们扫描所有的Java源文件。源代码的每一个部分都是一个特定类型的Element。换句话说：<strong>Element代表程序的元素，例如包、类或者方法。每个Element代表一个静态的、语言级别的构件。</strong></p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">package com.example;    <span class="comment">// PackageElement</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> Foo &#123;        <span class="comment">// TypeElement</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> a;      <span class="comment">// VariableElement</span></span><br><span class="line">    <span class="keyword">private</span> Foo other;  <span class="comment">// VariableElement</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Foo</span> <span class="params">()</span> </span>&#123;&#125;    <span class="comment">// ExecuteableElement</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setA</span> <span class="params">(  <span class="comment">// ExecuteableElement</span></span><br><span class="line">                     <span class="keyword">int</span> newA   <span class="comment">// TypeElement</span></span><br><span class="line">                     )</span> </span>&#123;&#125;&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">private void error(Element element, <span class="keyword">String</span> <span class="keyword">message</span> , Object... args) &#123;</span><br><span class="line">    <span class="keyword">if</span> (args.length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">message</span> = <span class="keyword">String</span>.format(<span class="keyword">message</span>, args);</span><br><span class="line">    &#125;    <span class="keyword">Message</span> <span class="keyword">message</span> =this.processingEnv.getMessager();</span><br><span class="line"></span><br><span class="line">   <span class="keyword">message</span>.printMessage(javax.tools.Diagnostic.Kind.ERROR , <span class="keyword">message</span>, element);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>在init()中，我们也获得了一个<strong>Messager</strong>对象的引用。<strong>Messager</strong>提供给注解处理器一个报告错误、警告以及提示信息的途径。<strong>它不是注解处理器开发者的日志工具，而是用来写一些信息给使用此注解器的第三方开发者的</strong>。在官方文档中描述了消息的不同级别。非常重要的是<strong>Kind.ERROR</strong>，因为这种类型的信息用来表示我们的注解处理器处理失败了。让<strong>Messager</strong>显示相关出错信息，更重要的是注解处理器程序必须完成运行而不崩溃，这就是为什么在调用<strong>error()</strong>后直接<strong>return</strong>。</p>
+</blockquote>
+<figure class="highlight dart"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">public boolean process(<span class="built_in">Set</span>&lt;? <span class="keyword">extends</span> TypeElement&gt; elements, RoundEnvironment env) &#123;</span><br><span class="line">    <span class="built_in">Map</span> targetClassMap = <span class="keyword">this</span> .findAndParseTargets(env);</span><br><span class="line">    <span class="built_in">Iterator</span> var4 = targetClassMap.entrySet().iterator() ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(var4.hasNext()) &#123;</span><br><span class="line">        Entry entry = (Entry)var4.next();</span><br><span class="line">        TypeElement typeElement = (TypeElement)entry.getKey() ;</span><br><span class="line">        ViewInjector viewInjector = (ViewInjector)entry.getValue();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            JavaFileObject e = <span class="keyword">this</span>.filer.createSourceFile(viewInjector.getFqcn(), <span class="keyword">new</span> <span class="built_in">Element</span>[]&#123;typeElement&#125;) ;</span><br><span class="line">            Writer writer = e.openWriter() ;</span><br><span class="line">            writer.write(viewInjector.brewJava()) ;</span><br><span class="line">            writer.flush() ;</span><br><span class="line">            writer.close() ;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException var10) &#123;</span><br><span class="line">            <span class="keyword">this</span> .error(typeElement, <span class="string">"Unable to write injector for type %s: %s"</span>, <span class="keyword">new</span> <span class="built_in">Object</span>[]&#123;typeElement, var10.getMessage()&#125;) ;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>通过<strong>JaveFileObject</strong>生成java文件。</p>
+</blockquote>
+<figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">public <span class="type">Set</span>&lt;<span class="type">String</span>&gt; getSupportedAnnotationTypes() &#123;</span><br><span class="line">    <span class="type">LinkedHashSet</span> supportTypes = new <span class="type">LinkedHashSet</span>();</span><br><span class="line">    supportTypes.add(<span class="type">InjectView</span>.class.getCanonicalName());</span><br><span class="line">    supportTypes.add(<span class="type">InjectViews</span>.class.getCanonicalName());</span><br><span class="line">    <span class="type">Iterator</span> var2 = <span class="type">LISTENERS</span>.<span class="keyword">iterator</span>();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(var2.hasNext()) &#123;</span><br><span class="line">        <span class="type">Class</span> listener = (<span class="type">Class</span>)var2.next();</span><br><span class="line">        supportTypes.add(listener.getCanonicalName());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> supportTypes;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>这里定义你的注解处理器注册到哪些注解上</p>
+</blockquote>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function">SourceVersion <span class="title">getSupportedSourceVersion</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">return</span> SourceVersion.<span class="title">latestSupported</span><span class="params">()</span> </span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>获取版本号</p>
+</blockquote>
+<hr>
+<p>参考：<br><a href="http://www.open-open.com/lib/view/open1423558996951.html" target="_blank" rel="external">http://www.open-open.com/lib/view/open1423558996951.html</a><br><a href="http://www.race604.com/annotation-processing/?utm_source=tuicool" target="_blank" rel="external">http://www.race604.com/annotation-processing/?utm_source=tuicool</a><br><a href="http://hannesdorfmann.com/annotation-processing/annotationprocessing101/" target="_blank" rel="external">http://hannesdorfmann.com/annotation-processing/annotationprocessing101/</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>Java中的<strong>注解(Annotation)</strong>是一个很神奇的东西，特别现在有很多Android库都是使用注解的方式来实现的，以下简单介绍<strong>Annotation</strong>的原理，以及实现一个注解处理器的流程。</p>
+<h3 ]]>
+    </summary>
+    
+      <category term="Annotation" scheme="http://yourbadman.github.io/tags/Annotation/"/>
+    
+      <category term="ORM" scheme="http://yourbadman.github.io/tags/ORM/"/>
+    
+  </entry>
+  
+  <entry>
     <title><![CDATA[街舞-迎新晚会]]></title>
     <link href="http://yourbadman.github.io/2012/05/17/popin/"/>
     <id>http://yourbadman.github.io/2012/05/17/popin/</id>
     <published>2012-05-17T04:23:37.000Z</published>
-    <updated>2016-01-09T05:55:51.321Z</updated>
+    <updated>2016-01-13T06:58:42.706Z</updated>
     <content type="html"><![CDATA[<blockquote>
-<p>热血！期望能一直跳下去。第一次上台，虽然没有个人的solo，已满足！</p>
+<p>热血！第一次上台，虽然没有个人的solo，已满足！</p>
 </blockquote>
-<div class="video-container"><iframe src="http://cache.tv.qq.com/qqplayerout.swf?vid=9buCm5O4Jp0" frameborder="0" allowfullscreen></iframe></div>
+<iframe height="498" width="510" src="http://cache.tv.qq.com/qqplayerout.swf?vid=9buCm5O4Jp0" frameborder="0" allowfullscreen></iframe>
 ]]></content>
     <summary type="html">
     <![CDATA[<blockquote>
-<p>热血！期望能一直跳下去。第一次上台，虽然没有个人的solo，已满足！</p>
+<p>热血！第一次上台，虽然没有个人的solo，已满足！</p>
 </blockquote>
-<div class="video-container"><iframe src="http://cache.tv.qq.com/qqplay]]>
+<iframe height="498" width="510" src="http://cache.tv.qq.com/qqplayerout.swf?vid]]>
     </summary>
     
       <category term="Popin" scheme="http://yourbadman.github.io/tags/Popin/"/>

@@ -1,0 +1,776 @@
+<!doctype html>
+<html class="theme-next   use-motion ">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.4.5.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,Handle,Looper," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="JsonWong's Blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.jpg?v=0.4.5.2" />
+
+
+
+
+
+
+<meta name="description" content="Android中有有许多的通讯机制，Binder(进程间通讯)/管道(poll/epoll)/Socket(zygote与system_service)/共享内存，各有特点；Android的UI线程与工作线程的分离,使得Handler机制孕育而生，显然，Handler适用线程与线程之间的通信；梳理了Handler/Looper/MessageQueue之间的关系，觉得吧，发现真正的苦力在Messa">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Android Handler机制">
+<meta property="og:url" content="http://yourbadman.github.io/2016/03/04/android-handle-architecture/index.html">
+<meta property="og:site_name" content="JsonWong's Blog">
+<meta property="og:description" content="Android中有有许多的通讯机制，Binder(进程间通讯)/管道(poll/epoll)/Socket(zygote与system_service)/共享内存，各有特点；Android的UI线程与工作线程的分离,使得Handler机制孕育而生，显然，Handler适用线程与线程之间的通信；梳理了Handler/Looper/MessageQueue之间的关系，觉得吧，发现真正的苦力在Messa">
+<meta property="og:image" content="http://yourbadman.github.io/./images/handler-modle-all.jpg">
+<meta property="og:image" content="http://yourbadman.github.io/./images/handler_create_map_1.png">
+<meta property="og:image" content="http://yourbadman.github.io/./images/handler_send_map_1.png">
+<meta property="og:image" content="http://yourbadman.github.io/./images/handler_arch.png">
+<meta property="og:updated_time" content="2016-06-05T03:47:10.913Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Android Handler机制">
+<meta name="twitter:description" content="Android中有有许多的通讯机制，Binder(进程间通讯)/管道(poll/epoll)/Socket(zygote与system_service)/共享内存，各有特点；Android的UI线程与工作线程的分离,使得Handler机制孕育而生，显然，Handler适用线程与线程之间的通信；梳理了Handler/Looper/MessageQueue之间的关系，觉得吧，发现真正的苦力在Messa">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'always',
+    motion: true
+  };
+</script>
+
+  <title> Android Handler机制 | JsonWong's Blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+
+
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">JsonWong's Blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">Not the alarm clock wake you up every day, is a dream！</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu menu-left">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-heartbeat fa-fw"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  
+  <form class="site-search-form">
+    <input type="text" id="st-search-input" class="st-search-input st-default-search-input" />
+  </form>
+
+
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+    (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+    e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install', 'vseYZm7U1UMCoAyPaQxN','2.0.0');
+</script>
+
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content">
+          
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Android Handler机制
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            发表于
+            <time itemprop="dateCreated" datetime="2016-03-04T12:00:37+08:00" content="2016-03-04">
+              2016-03-04
+            </time>
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/04/android-handle-architecture/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/04/android-handle-architecture/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><hr>
+<p>Android中有有许多的通讯机制，<strong>Binder</strong>(进程间通讯)/<strong>管道</strong>(poll/epoll)/<strong>Socket</strong>(zygote与system_service)/共享内存，各有特点；Android的<strong>UI线程</strong>与<strong>工作线程</strong>的分离,使得<strong>Handler</strong>机制孕育而生，显然，Handler适用线程与线程之间的通信；梳理了<strong>Handler/Looper/MessageQueue</strong>之间的关系，觉得吧，发现真正的苦力在<strong>MessageQueue</strong>（ps：native层的处理）,<strong>Handler</strong>是‘管理者’（ps:入口类）；</p>
+<blockquote>
+<p> 相关源码</p>
+</blockquote>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/</span>Handler.java</span><br><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/</span>Looper.java</span><br><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/M</span>essage.java</span><br><span class="line">framework<span class="regexp">/base/</span>core<span class="regexp">/java/</span>andorid<span class="regexp">/os/M</span>essageQueue.java</span><br><span class="line">libcore<span class="regexp">/luni/</span>src<span class="regexp">/main/</span>java<span class="regexp">/java/</span>lang<span class="regexp">/ThreadLocal.java</span></span><br></pre></td></tr></table></figure>
+<h3 id="I-Model"><a href="#I-Model" class="headerlink" title="I.Model"></a>I.Model</h3><ul>
+<li><strong>Message</strong> :  包含了两个int和一个object作为消息参数，一个what标识消息。</li>
+<li><strong>MessageQueu</strong> :  消息队列池。消息队列的主要功能向消息池<strong>投递消息</strong>(enqueueMessage)和<strong>取走消息池</strong>的消息(MessageQueue.next，阻塞式)；</li>
+<li><strong>Handler</strong> : 消息辅助类，发送各种消息事件（send<em> , post</em> , runWithScissors）</li>
+<li><strong>Looper</strong> :  死循环的取MessageQueue消息，prepare(),loop(),dispatchMessage()</li>
+<li><strong>ThreadLocal</strong> :  线程的本地变量，存储Looper，线程间独立存在，set(),get()进行存取。</li>
+<li><strong>结构图</strong><br><img src="/./images/handler-modle-all.jpg" alt="modle"></li>
+</ul>
+<h3 id="II-Handler_u521B_u5EFA_u3001_u53D1_u9001_u3001_u63A5_u6536_u8FC7_u7A0B"><a href="#II-Handler_u521B_u5EFA_u3001_u53D1_u9001_u3001_u63A5_u6536_u8FC7_u7A0B" class="headerlink" title="II.Handler创建、发送、接收过程"></a>II.Handler创建、发送、接收过程</h3><h4 id="Handler_u521B_u5EFA_u6240_u5728_u7EBF_u7A0B_28Looper_u6240_u5728_u7EBF_u7A0B_29"><a href="#Handler_u521B_u5EFA_u6240_u5728_u7EBF_u7A0B_28Looper_u6240_u5728_u7EBF_u7A0B_29" class="headerlink" title="Handler创建所在线程(Looper所在线程)"></a>Handler创建所在线程(Looper所在线程)</h4><p><img src="/./images/handler_create_map_1.png" alt="create_handler"></p>
+<h4 id="Handler_u53D1_u6D88_u606F_u6240_u5728_u7EBF_u7A0B"><a href="#Handler_u53D1_u6D88_u606F_u6240_u5728_u7EBF_u7A0B" class="headerlink" title="Handler发消息所在线程"></a>Handler发消息所在线程</h4><p><img src="/./images/handler_send_map_1.png" alt="send_message"></p>
+<h4 id="MessageQueue_u662F_u8FDE_u63A5Java_u5C42_u548CNative_u5C42_u7684_u7EBD_u5E26"><a href="#MessageQueue_u662F_u8FDE_u63A5Java_u5C42_u548CNative_u5C42_u7684_u7EBD_u5E26" class="headerlink" title="MessageQueue是连接Java层和Native层的纽带"></a>MessageQueue是连接Java层和Native层的纽带</h4><ul>
+<li><strong>nativePollOnece(long ptr, int timeoutMillis)</strong></li>
+<li><strong>nativeWake(long ptr)</strong></li>
+<li><strong>nativeDestroy(long ptr)</strong></li>
+<li><strong>nativeIsPolling(long ptr)</strong><blockquote>
+<p>传入的为<strong>MessageQueue#mPtr</strong>变量，<strong>MessageQueue</strong>通过<strong>mPtr</strong>变量保存<strong>NativeMessageQueue</strong>对象，从而使得<strong>MessageQueue</strong>成为<strong>Java</strong>层和<strong>Native</strong>层的枢纽，既能处理上层消息，也能处理<strong>native</strong>层消息；</p>
+</blockquote>
+</li>
+</ul>
+<p><img src="/./images/handler_arch.png" alt="handler_arch"></p>
+<ul>
+<li><strong>红色虚线关系</strong>：Java层和Native层的MessageQueue通过JNI建立关联，彼此之间能相互调用，搞明白这个互调关系，也就搞明白了Java如何调用C++代码，C++代码又是如何调用Java代码。</li>
+<li><strong>蓝色虚线关系</strong>：<strong>Handler/Looper/Message</strong>这三大类Java层与Native层并没有任何的真正关联，只是分别在Java层和Native层的handler消息模型中具有相似的功能。都是彼此独立的，各自实现相应的逻辑。</li>
+<li><strong>WeakMessageHandler</strong>继承于MessageHandler类，NativeMessageQueue继承于MessageQueue类</li>
+</ul>
+<h3 id="III-Handler_u63D0_u4F9B_u7684_u529F_u80FD"><a href="#III-Handler_u63D0_u4F9B_u7684_u529F_u80FD" class="headerlink" title="III.Handler提供的功能"></a>III.Handler提供的功能</h3><ul>
+<li><p>提供了<strong>send*</strong>,<strong>post*</strong>,<strong>remove*</strong>,此外还提供了<strong>runWithScissors</strong><br><strong>runWithScissors</strong>: 一个后台线程需要等待另一个线程的执行结果的时候的一种方式。</p>
+ <figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="function">WindowManagerService <span class="title">main</span><span class="params">(<span class="keyword">final</span> Context context,</span><br><span class="line">	            <span class="keyword">final</span> InputManagerService im,</span><br><span class="line">	            <span class="keyword">final</span> <span class="keyword">boolean</span> haveInputMethods, <span class="keyword">final</span> <span class="keyword">boolean</span> showBootMsgs,</span><br><span class="line">	            <span class="keyword">final</span> <span class="keyword">boolean</span> onlyCore)</span> </span>&#123;</span><br><span class="line">	        <span class="keyword">final</span> WindowManagerService[] holder = <span class="keyword">new</span> WindowManagerService[<span class="number">1</span>];</span><br><span class="line">	        DisplayThread.getHandler().runWithScissors(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">	            <span class="annotation">@Override</span></span><br><span class="line">	            <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	                holder[<span class="number">0</span>] = <span class="keyword">new</span> WindowManagerService(context, im,</span><br><span class="line">	                        haveInputMethods, showBootMsgs, onlyCore);</span><br><span class="line">	            &#125;</span><br><span class="line">	        &#125;, <span class="number">0</span>);</span><br><span class="line">	        <span class="keyword">return</span> holder[<span class="number">0</span>];</span><br><span class="line">	    &#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>WindowManagerService</strong>构造完成之后才能返回，否则如果连最重要的<strong>WMS</strong>都没有初始化成功 ，那么Androiｄ系统就没有继续进行下去的理由了。</p>
+</blockquote>
+<p><strong>需要注意的是</strong>：runWithScissors被标记为@hide，需要反射调用，或者重写BlockingRunnable类。<a href="http://www.jianshu.com/p/493cc5368a73" target="_blank" rel="external">详细例子</a></p>
+</li>
+<li><strong>Message</strong>的异步功能（默认情况为同步Message）,通过postSyncBarrier和removeSyncBarrier提供。</li>
+</ul>
+<h3 id="IV-Handler_u5E38_u89C1_u95EE_u9898_u53CA_u5E94_u7528_u573A_u666F"><a href="#IV-Handler_u5E38_u89C1_u95EE_u9898_u53CA_u5E94_u7528_u573A_u666F" class="headerlink" title="IV.Handler常见问题及应用场景"></a>IV.Handler常见问题及应用场景</h3><ol>
+<li>在非主线程发送消息时，按照<strong>Looper.prepare() -&gt;Handler.sendMessage/创建Handler -&gt; Looper.loop()</strong>执行。ps:在主线程中不用的原因，在于<strong>ActivityThread</strong>在执行<strong>main</strong>方法时已经执行了 <strong>Looper.prepareMainLooper()</strong>；</li>
+<li><p><strong>Handler</strong>可能导致内存泄漏，由于<strong>Handler</strong>有可能会被<strong>Looper#mQueue#mMessages#target</strong>引用，而很有可能由于消息还未到达处理的时刻，导致引用会被长期持有，如果<strong>Handler</strong>是一个<strong>非静态内部类</strong>，就会持有一个<strong>外部类实例</strong>的引用，进而导致外部类很有可能出现无法及时<strong>gc</strong>的问题。</p>
+<blockquote>
+<p><strong>直接静态化内部类</strong>，这样内部类<strong>Handler</strong>就不再持有外部类实例的引用，再在<strong>Handler</strong>的构造函数中以<strong>弱引用(当所指实例不存在强引用与软引用后，GC时会自动回弱引用指向的实例)</strong>传入外部类供使用即可。</p>
+</blockquote>
+</li>
+<li><p>为了对外提供绑定目标Handler对象的所有消息的<strong>暂停、恢复、废弃、取消</strong>所有队列中的消息，用于整个完全解耦消息队列的全局性有效管理。<a href="https://github.com/Jacksgong/MessageHandler/blob/master/README-zh.md" target="_blank" rel="external">查看github</a></p>
+</li>
+<li><a href="http://gityuan.com/2016/01/01/handler-message-usage/" target="_blank" rel="external">HandlerThread的原理</a>，在<strong>HandlerThread</strong>线程中运行<strong>Loop</strong>()方法，在其他线程中通过<strong>Handler</strong>发送消息到<strong>HandlerThread</strong>线程。通过<strong>wait/notifyAll</strong>的方式，有效地解决了<strong>多线程的同步问题</strong>。</li>
+<li><a href="http://www.cnblogs.com/benhero/p/4521727.html" target="_blank" rel="external">Handler 和 Timer 的比较</a>: 经常需要执行一些<strong>短周期的定时任务</strong>，这时候有两个选择<strong>Timer</strong>或者<strong>Handler</strong>。然而个人认为：Handler在多个方面比Timer更为优秀，更推荐使用。</li>
+</ol>
+<hr>
+<p><a href="http://blog.dreamtobe.cn/2016/03/11/android_handler_looper/" target="_blank" rel="external">http://blog.dreamtobe.cn/2016/03/11/android_handler_looper/</a><br><a href="http://gityuan.com/2015/12/27/handler-message-native/" target="_blank" rel="external">http://gityuan.com/2015/12/27/handler-message-native/</a><br><a href="http://gityuan.com/2015/12/26/handler-message-framework/" target="_blank" rel="external">http://gityuan.com/2015/12/26/handler-message-framework/</a><br><a href="http://blog.csdn.net/lmj623565791/article/details/38377229" target="_blank" rel="external">http://blog.csdn.net/lmj623565791/article/details/38377229</a><br><a href="http://androidtrainningcenter.blogspot.my/2013/12/handler-vs-timer-fixed-period-execution.html" target="_blank" rel="external">http://androidtrainningcenter.blogspot.my/2013/12/handler-vs-timer-fixed-period-execution.html</a><br><a href="http://www.jianshu.com/p/493cc5368a73" target="_blank" rel="external">http://www.jianshu.com/p/493cc5368a73</a></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/Handle/" rel="tag">#Handle</a>
+          
+            <a href="/tags/Looper/" rel="tag">#Looper</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/02/04/android_memory_optimize_tip/" rel="next" title="Android最佳性能实践—合理管理内存">
+                <i class="fa fa-chevron-left"></i> Android最佳性能实践—合理管理内存
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <div class="ds-share flat" data-thread-key="2016/03/04/android-handle-architecture/"
+     data-title="Android Handler机制"
+     data-content=""
+     data-url="http://yourbadman.github.io/2016/03/04/android-handle-architecture/">
+  <div class="ds-share-inline">
+    <ul  class="ds-share-icons-16">
+
+      <li data-toggle="ds-share-icons-more"><a class="ds-more" href="javascript:void(0);">分享到：</a></li>
+      <li><a class="ds-weibo" href="javascript:void(0);" data-service="weibo">微博</a></li>
+      <li><a class="ds-qzone" href="javascript:void(0);" data-service="qzone">QQ空间</a></li>
+      <li><a class="ds-qqt" href="javascript:void(0);" data-service="qqt">腾讯微博</a></li>
+      <li><a class="ds-wechat" href="javascript:void(0);" data-service="wechat">微信</a></li>
+
+    </ul>
+    <div class="ds-share-icons-more">
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
+
+
+        </div>
+
+        
+
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
+
+        
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/03/04/android-handle-architecture/"
+           data-title="Android Handler机制" data-url="http://yourbadman.github.io/2016/03/04/android-handle-architecture/">
+      </div>
+    
+  </div>
+
+
+      </div>
+
+      
+        
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/avatar.jpg" alt="JsonWong" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">JsonWong</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">记录每一天的成长!努力成为全栈工程师！</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">5</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            
+              <span class="site-state-item-count">0</span>
+              <span class="site-state-item-name">分类</span>
+              
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/Yourbadman" target="_blank">
+                  
+                    <i class="fa fa-globe"></i> github
+                  
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#I-Model"><span class="nav-number">1.</span> <span class="nav-text">I.Model</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#II-Handler_u521B_u5EFA_u3001_u53D1_u9001_u3001_u63A5_u6536_u8FC7_u7A0B"><span class="nav-number">2.</span> <span class="nav-text">II.Handler创建、发送、接收过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Handler_u521B_u5EFA_u6240_u5728_u7EBF_u7A0B_28Looper_u6240_u5728_u7EBF_u7A0B_29"><span class="nav-number">2.1.</span> <span class="nav-text">Handler创建所在线程(Looper所在线程)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Handler_u53D1_u6D88_u606F_u6240_u5728_u7EBF_u7A0B"><span class="nav-number">2.2.</span> <span class="nav-text">Handler发消息所在线程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#MessageQueue_u662F_u8FDE_u63A5Java_u5C42_u548CNative_u5C42_u7684_u7EBD_u5E26"><span class="nav-number">2.3.</span> <span class="nav-text">MessageQueue是连接Java层和Native层的纽带</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#III-Handler_u63D0_u4F9B_u7684_u529F_u80FD"><span class="nav-number">3.</span> <span class="nav-text">III.Handler提供的功能</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IV-Handler_u5E38_u89C1_u95EE_u9898_u53CA_u5E94_u7528_u573A_u666F"><span class="nav-number">4.</span> <span class="nav-text">IV.Handler常见问题及应用场景</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+      
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2012 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">JsonWong</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="#">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="#">
+    NexT.Mist
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"jsonwong"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+
+    
+  
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.2"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.2"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+<script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+<script type="text/javascript" src="/js/motion.js?v=0.4.5.2" id="motion.global"></script>
+
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.2" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    motionMiddleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  <script type="text/javascript" src="/js/bootstrap.js"></script>
+
+  
+  
+
+  
+  
+
+</body>
+</html>

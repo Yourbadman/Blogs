@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Not the alarm clock wake you up every day, is a dream！]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://yourbadman.github.io/"/>
-  <updated>2016-06-05T03:47:11.486Z</updated>
+  <updated>2016-06-06T15:58:32.221Z</updated>
   <id>http://yourbadman.github.io/</id>
   
   <author>
@@ -13,6 +13,124 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title><![CDATA[AsyncTask原理]]></title>
+    <link href="http://yourbadman.github.io/2016/03/25/android-asynctask-architecture/"/>
+    <id>http://yourbadman.github.io/2016/03/25/android-asynctask-architecture/</id>
+    <published>2016-03-24T16:00:00.000Z</published>
+    <updated>2016-06-06T15:58:32.221Z</updated>
+    <content type="html"><![CDATA[<blockquote>
+<p>AsyncTask的核心: Handler(InternalHandler)+Thread(ThreadPoolExecutor)，Handler解决UI线程与工作现场的通信，ThreadPoolExecutor更好管理Thread，</p>
+</blockquote>
+<h3 id="I-Introduction"><a href="#I-Introduction" class="headerlink" title="I.Introduction"></a>I.Introduction</h3><h4 id="u6D89_u53CA_u5230_u7684_u7C7B_uFF1A"><a href="#u6D89_u53CA_u5230_u7684_u7C7B_uFF1A" class="headerlink" title="涉及到的类："></a><strong>涉及到的类：</strong></h4><figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">java<span class="class">.util</span><span class="class">.concurrent</span><span class="class">.FutureTask</span></span><br><span class="line">android<span class="class">.io</span><span class="class">.AsyncTask</span></span><br><span class="line">android<span class="class">.io</span><span class="class">.Handler</span></span><br><span class="line">java<span class="class">.util</span><span class="class">.concurrent</span><span class="class">.BlockingQueue</span></span><br><span class="line">java<span class="class">.util</span><span class="class">.concurrent</span><span class="class">.Executor</span></span><br><span class="line">java<span class="class">.util</span><span class="class">.concurrent</span><span class="class">.ThreadExecutor</span></span><br></pre></td></tr></table></figure>
+<h4 id="u5B98_u65B9_u4F8B_u5B50"><a href="#u5B98_u65B9_u4F8B_u5B50" class="headerlink" title="官方例子"></a><a href="https://developer.android.com/reference/android/os/AsyncTask.html" target="_blank" rel="external"><strong>官方例子</strong></a></h4><figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">private class <span class="type">DownloadFilesTask</span> extends <span class="type">AsyncTask</span>&lt;<span class="type">URL</span>, <span class="type">Integer</span>, <span class="type">Long</span>&gt; &#123;</span><br><span class="line">	//工作线程执行，进行耗时操作</span><br><span class="line">     protected <span class="type">Long</span> doInBackground(<span class="type">URL</span>... urls) &#123;</span><br><span class="line">         <span class="type">int</span> count = urls.length;</span><br><span class="line">         long totalSize = <span class="number">0</span>;</span><br><span class="line">         <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">             totalSize += <span class="type">Downloader</span>.downloadFile(urls[i]);</span><br><span class="line">             publishProgress((<span class="type">int</span>) ((i / (<span class="type">float</span>) count) * <span class="number">100</span>));</span><br><span class="line">             // <span class="type">Escape</span> early <span class="keyword">if</span> cancel() <span class="keyword">is</span> called</span><br><span class="line">             <span class="keyword">if</span> (isCancelled()) <span class="keyword">break</span>;</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">return</span> totalSize;</span><br><span class="line">     &#125;</span><br><span class="line">//主线程中执行，更新进度</span><br><span class="line">     protected <span class="type">void</span> onProgressUpdate(<span class="type">Integer</span>... progress) &#123;</span><br><span class="line">         setProgressPercent(progress[<span class="number">0</span>]);</span><br><span class="line">     &#125;</span><br><span class="line">//主线程中执行，完成耗时工作后</span><br><span class="line">     protected <span class="type">void</span> onPostExecute(<span class="type">Long</span> <span class="literal">result</span>) &#123;</span><br><span class="line">         showDialog(<span class="string">"Downloaded "</span> + <span class="literal">result</span> + <span class="string">" bytes"</span>);</span><br><span class="line">     &#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> new <span class="type">DownloadFilesTask</span>().execute(url1, url2, url3);</span><br></pre></td></tr></table></figure>
+<p><strong>参数说明</strong><br><strong>AsyncTask</strong>的三个参数<strong><params, progress,="" result=""></params,></strong><br>说明：</p>
+<ul>
+<li><strong>Params</strong>：执行AsyncTask时传递的参数类型；</li>
+<li><strong>Progress</strong>:执行后台任务时更新进度的进度值类型；</li>
+<li><strong>Result</strong>:后台任务执行完成后的返回值类型。<br><strong>注意</strong>：并不是所有的参数都需要指明类型，如果某一个参数你没有用到，改成<strong>Void</strong>类型即可。</li>
+</ul>
+<p><strong>执行过程：</strong><br>在<strong>AsyncTask</strong>执行的过程中，会经历如下<strong>四个步骤</strong>：</p>
+<ul>
+<li><strong>onPreExecute</strong>：UI线程中调用，在调用<strong>excute</strong>方法后会立即被调用，这个方法适用于初始化task，比如显示后台任务进度条；</li>
+<li><strong>doInBackground</strong>：非UI线程中调用，在<strong>onPreExecute</strong>执行后调用，这个方法适用于执行耗时的操作，<strong>excute</strong>方法中的<strong>Params</strong>参数就是通过这个方法传递的，该方法的返回值就是<strong>Task</strong>执行的结果，在<strong>doInBackground</strong>方法执行过程中，可以通过<strong>publishProgress</strong>方法来更新后台任务的执行进度；</li>
+<li><strong>onProgressUpdate</strong>：UI线程中调用，在<strong>publishProgress</strong>方法后被调用，这个方法用于在后台任务执行过程中显示任务的进度UI，比如它可以用于显示进度条动画或者显示进度文本；</li>
+<li><strong>onPostExecute</strong>：UI线程中调用，后台任务执行完成后被调用，<strong>Task</strong>返回的结果以参数的形式传递到该方法中。</li>
+</ul>
+<p><strong>需要注意的规则</strong></p>
+<ul>
+<li>必须在UI线程中加载<strong>AsyncTask</strong> 。<strong>JELLY_BEAN</strong>中自动完成。</li>
+<li>必须在UI线程中初始化<strong>AsyncTask</strong>；</li>
+<li><strong>execute(Params…)</strong> 必须在UI线程调用；</li>
+<li>不能手动的调用<strong>onPreExecute(), onPostExecute(Result), doInBackground(Params…), onProgressUpdate(Progress…)</strong> ；</li>
+<li><strong>一个Task只能被执行一次</strong>，第二次执行将会报错。</li>
+</ul>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> AsyncTask&lt;Params, Progress, Result&gt; executeOnExecutor(Executor exec,</span><br><span class="line">          Params... params) &#123;</span><br><span class="line">      <span class="keyword">if</span> (mStatus != Status.PENDING) &#123;</span><br><span class="line">          <span class="keyword">switch</span> (mStatus) &#123;</span><br><span class="line">              <span class="keyword">case</span> RUNNING:</span><br><span class="line">                  <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Cannot execute task:"</span></span><br><span class="line">                          + <span class="string">" the task is already running."</span>);</span><br><span class="line">              <span class="keyword">case</span> FINISHED:</span><br><span class="line">                  <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Cannot execute task:"</span></span><br><span class="line">                          + <span class="string">" the task has already been executed "</span></span><br><span class="line">                          + <span class="string">"(a task can be executed only once)"</span>);</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">      mStatus = Status.RUNNING;</span><br><span class="line"></span><br><span class="line">      onPreExecute();</span><br><span class="line"></span><br><span class="line">      mWorker.mParams = params;</span><br><span class="line">      exec.execute(mFuture);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="II-Sequence_Diagram"><a href="#II-Sequence_Diagram" class="headerlink" title="II.Sequence Diagram"></a>II.Sequence Diagram</h3><p><img src="/./images/android_asynctask_sedequence.png" alt="Sequence Diagram"></p>
+<h3 id="III-Expand"><a href="#III-Expand" class="headerlink" title="III.Expand"></a>III.Expand</h3><h4 id="Handler_u673A_u5236"><a href="#Handler_u673A_u5236" class="headerlink" title="Handler机制"></a><a href="http://www.jsonwong.cn/2016/03/04/android-handle-architecture/" target="_blank" rel="external"> Handler机制</a></h4><h4 id="Executors/ExecutorService_u7EBF_u7A0B_u6C60_uFF1A"><a href="#Executors/ExecutorService_u7EBF_u7A0B_u6C60_uFF1A" class="headerlink" title="Executors/ExecutorService线程池："></a>Executors/ExecutorService线程池：</h4><p><strong>优点:</strong></p>
+<ul>
+<li><strong>重用线程池</strong>，避免因为线程的创建和销毁所带来的性能开销；</li>
+<li>能够有效的控制线程池中的<strong>最大并发数</strong>，避免大量的线程之间因为<strong>互相抢占系统资源</strong>而导致的<strong>堵塞现象</strong>；</li>
+<li>能够对线程进行简单的管理，并提供<strong>定时执行</strong>以及<strong>制定间隔循环执行</strong>等功能。</li>
+</ul>
+<p><strong>线程池的分类:</strong></p>
+<blockquote>
+<p>以下四种通过<strong>ThreadPoolExecutor</strong>配置出来（eg: Executors#newFixedThreadPool）</p>
+</blockquote>
+<ul>
+<li><strong>FixedThreadPool</strong>: 线程数量固定(参数传入)，核心线程无超时限制，空闲线程不回收,<strong>workQueue</strong>为<strong>LinkedBlockingQueue</strong></li>
+<li><strong>CachedThreadPool</strong>: 线程数量不固定，最大线程数Integer.MAX_VALUE，适合大量的耗时较少的任务,<strong>workQueue</strong>为<strong>SynchronousQueue</strong></li>
+<li><strong>ScheduledThreadPool</strong>: 线程数量固定(参数传入)，核心线程数没有限制，非核心线程闲置立即会被回收，适合执行定时任务和具有固定周期的重复任务,<strong>workQueue</strong>为<strong>DelayedWorkQueue</strong></li>
+<li><strong>SingleThreadPool</strong>: 只有一个核心的线程，顺序执行，统一所有外界任务到一个线程中，任务之间不需要处理线程同步问题，<strong>workQueue</strong>为<strong>LinkedBlockingQueue</strong></li>
+</ul>
+<blockquote>
+<p>ForkJoinPool是JDK7后新增的线程池（concurrent包），分治思想的体现，Executors#newWorkStealingPool是JDK8新增的方法，利用的就是ForkJoinPool。</p>
+</blockquote>
+<ul>
+<li><strong>WorkStealingPool</strong>(ForkJoinPool): 线程数为CPU核心数，适合执行重任务，比如递归任务，可以减少任务间的冲突.</li>
+</ul>
+<p><strong>线程池流程:</strong><br><img src="/./images/thread-pool.jpg" alt="hread-pool"></p>
+<p><strong>优化:</strong></p>
+<ul>
+<li><strong>对于CPU密集型任务</strong>：线程池中线程个数应尽量少，不应大于CPU核心数；</li>
+<li><strong>对于IO密集型任务</strong>：由于IO操作速度远低于CPU速度，那么在运行这类任务时，CPU绝大多数时间处于空闲状态，那么线程池可以配置尽量多些的线程，以提高CPU利用率；</li>
+<li><strong>对于混合型任务</strong>：可以拆分为CPU密集型任务和IO密集型任务，当这两类任务执行时间相差无几时，通过拆分再执行的吞吐率高于串行执行的吞吐率，但若这两类任务执行时间有数据级的差距，那么没有拆分的意义。</li>
+</ul>
+<p><strong>线程池监控:</strong><br>利用线程池提供的参数进行监控，参数如下：</p>
+<ul>
+<li><strong>taskCount</strong>：线程池需要执行的任务数量。</li>
+<li><strong>completedTaskCount</strong>：线程池在运行过程中已完成的任务数量，小于或等于taskCount。</li>
+<li><strong>largestPoolSize</strong>：线程池曾经创建过的最大线程数量，通过这个数据可以知道线程池是否满过。如等于线程池的最大大小，则表示线程池曾经满了。</li>
+<li><strong>getPoolSize</strong>：线程池的线程数量。如果线程池不销毁的话，池里的线程不会自动销毁，所以这个大小只增不减。</li>
+<li><strong>getActiveCount</strong>：获取活动的线程数。</li>
+</ul>
+<blockquote>
+<p>通过扩展线程池进行监控：继承线程池并重写线程池的<strong>beforeExecute</strong>()，<strong>afterExecute</strong>()和<strong>terminated</strong>()方法，可以在<strong>任务执行前、后和线程池关闭前自定义行为</strong>。如监控任务的平均执行时间，最大执行时间和最小执行时间等。</p>
+</blockquote>
+<h4 id="FutureTask"><a href="#FutureTask" class="headerlink" title="FutureTask"></a>FutureTask</h4><p><strong>Future</strong>提供了三种功能：</p>
+<ul>
+<li><strong>判断任务是否完成</strong>；</li>
+<li><strong>能够中断任务</strong>；</li>
+<li><strong>能够获取任务执行结果</strong>。</li>
+</ul>
+<p><strong>Future</strong>接口中声明了5个方法：</p>
+<ul>
+<li><strong>cancel</strong>方法用来取消任务，如果取消任务成功则返回true，如果取消任务失败则返回false。</li>
+<li><strong>isCancelled</strong>方法表示任务是否被取消成功，如果在任务正常完成前被取消成功，则返回 true。</li>
+<li><strong>isDone</strong>方法表示任务是否已经完成，若任务完成，则返回true；</li>
+<li><strong>get()</strong>方法用来获取执行结果，这个方法会产生阻塞，会一直等到任务执行完毕才返回；</li>
+<li><strong>get(long timeout, TimeUnit unit)</strong>用来获取执行结果，如果在指定时间内，还没获取到结果，就直接返回<strong>null</strong>。</li>
+</ul>
+<h3 id="IV-Attention"><a href="#IV-Attention" class="headerlink" title="IV.Attention"></a>IV.Attention</h3><ul>
+<li>程序大量的使用线程，不推荐用AsyncTask,一方面是3.0版本中<strong>AsyncTask</strong>的改动还是挺大的（ps:在3.0之前是并行执行，3.0之后改用了串行执行也可以并行执行），另一方面是，线程池的最大为<strong>128</strong>，超过这个就会抛出异常<strong>RejectExecutionExecption</strong>，可以自定义线程池管理Thread。</li>
+<li><strong>没有对异常情况进行处理</strong>，ps:可以加个<strong>onError</strong>(),<a href="http://blog.csdn.net/androidzhaoxiaogang/article/details/6790306" target="_blank" rel="external">详情请见</a></li>
+<li><strong>注意内存泄漏</strong>。运行时配置变更（例如，用户更改了屏幕方向）导致 Activity 意外重启，这可能会销毁工作线程，在 <strong>Activity</strong> 被销毁时正确地取消任务。</li>
+<li><p>当<strong>doInBackgroud</strong>还未执行完，调用<strong>AsyncTask#cancel()</strong>可能会失效。</p>
+  <figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">final AsyncTask&lt;<span class="built_in">String</span>, <span class="literal">Void</span>, <span class="built_in">String</span>&gt; task = <span class="literal">new</span> AsyncTask&lt;<span class="built_in">String</span>, <span class="literal">Void</span>, <span class="built_in">String</span>&gt;() &#123;</span><br><span class="line">    @Override</span><br><span class="line">    <span class="keyword">protected</span> <span class="built_in">String</span> doInBackground(<span class="built_in">String</span><span class="attribute">...</span> <span class="keyword">params</span>) &#123;</span><br><span class="line">        AtomicBoolean isTrue = <span class="literal">new</span> AtomicBoolean(<span class="literal">true</span>);</span><br><span class="line">        <span class="keyword">while</span> (isTrue<span class="built_in">.</span>get()) &#123;</span><br><span class="line">            <span class="keyword">Log</span><span class="built_in">.</span>i(<span class="string">"Demo"</span>, <span class="string">"loop is running!"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">""</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line">task<span class="built_in">.</span>execute(<span class="string">""</span>);</span><br><span class="line"><span class="literal">new</span> Handler()<span class="built_in">.</span>postDelayed(<span class="literal">new</span> Runnable() &#123;</span><br><span class="line">    @Override</span><br><span class="line">    <span class="keyword">public</span> <span class="literal">void</span> run() &#123;</span><br><span class="line">        <span class="keyword">Log</span><span class="built_in">.</span>i(<span class="string">"Demo"</span>,<span class="string">"canceling!"</span>);</span><br><span class="line">        task<span class="built_in">.</span>cancel(<span class="literal">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;, <span class="number">2000</span>);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h3 id="VI-More"><a href="#VI-More" class="headerlink" title="VI.More"></a>VI.More</h3><ul>
+<li><a href="https://developer.android.com/training/multiple-threads/index.html" target="_blank" rel="external">Multiple-threads</a></li>
+<li><a href="http://developer.android.com/guide/components/processes-and-threads.html" target="_blank" rel="external">processes-and-threads</a></li>
+</ul>
+<p><a href="https://developer.android.com/reference/android/os/AsyncTask.html" target="_blank" rel="external">https://developer.android.com/reference/android/os/AsyncTask.html</a><br><a href="http://www.infoq.com/cn/articles/android-worker-thread" target="_blank" rel="external">http://www.infoq.com/cn/articles/android-worker-thread</a><br><a href="http://gityuan.com/2016/01/16/thread-pool/" target="_blank" rel="external">http://gityuan.com/2016/01/16/thread-pool/</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<blockquote>
+<p>AsyncTask的核心: Handler(InternalHandler)+Thread(ThreadPoolExecutor)，Handler解决UI线程与工作现场的通信，ThreadPoolExecutor更好管理Thread，</p>
+</]]>
+    </summary>
+    
+      <category term="Android" scheme="http://yourbadman.github.io/tags/Android/"/>
+    
+      <category term="AsyncTask" scheme="http://yourbadman.github.io/tags/AsyncTask/"/>
+    
+      <category term="Concurrent" scheme="http://yourbadman.github.io/tags/Concurrent/"/>
+    
+      <category term="Thread" scheme="http://yourbadman.github.io/tags/Thread/"/>
+    
+  </entry>
   
   <entry>
     <title><![CDATA[Android Handler机制]]></title>

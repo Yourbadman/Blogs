@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title><![CDATA[JsonWong's Blog]]></title>
-  <subtitle><![CDATA[Not the alarm clock wake you up every day, is a dream！]]></subtitle>
+  <subtitle><![CDATA[Is a dream！]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://yourbadman.github.io/"/>
   <updated>2016-06-06T15:58:32.221Z</updated>
@@ -129,6 +129,41 @@
       <category term="Concurrent" scheme="http://yourbadman.github.io/tags/Concurrent/"/>
     
       <category term="Thread" scheme="http://yourbadman.github.io/tags/Thread/"/>
+    
+  </entry>
+  
+  <entry>
+    <title><![CDATA[用Chrome调试Android App]]></title>
+    <link href="http://yourbadman.github.io/2016/03/14/android-tools-debug-stetho/"/>
+    <id>http://yourbadman.github.io/2016/03/14/android-tools-debug-stetho/</id>
+    <published>2016-03-14T03:13:37.000Z</published>
+    <updated>2016-06-13T13:01:30.408Z</updated>
+    <content type="html"><![CDATA[<p>在Android开发过程中，除了编译器自带的调试工具外，还有一些是必备但是调试器没有的，像网络抓包、Sqlite查询等，FaceBook开源了一款Debug工具<strong>Stetho</strong>，解决了这些痛点。</p>
+<h4 id="u6293_u5305_u5DE5_u5177"><a href="#u6293_u5305_u5DE5_u5177" class="headerlink" title="抓包工具"></a>抓包工具</h4><p><strong>windows</strong>平台最好用的应该是<strong>Fiddle</strong>， mac上最好用的应该是<strong>Charles</strong>。这个应该是App开发必备，不管是Android还是iOS。我就是经常用<strong>Fiddle</strong>进行对<strong>App</strong>的抓包（ps:比如对<strong>网易新闻</strong>抓包分析，很容易就可以模仿写出他们的客户端，你懂的），其中，你必须在模拟器上<strong>设置代理</strong>，才能进行抓包(设置代理不是件容易的事)。<a href="http://blog.csdn.net/lrckid/article/details/42486923" target="_blank" rel="external">Genymotion 使用 Fiddler抓包</a>教程。</p>
+<h4 id="Sqlite_u67E5_u8BE2"><a href="#Sqlite_u67E5_u8BE2" class="headerlink" title="Sqlite查询"></a>Sqlite查询</h4><p>这个编译器自带的插件查看很麻烦，Android的调试器需要root才会取得到,这个真的很蛋疼。</p>
+<h4 id="Stetho"><a href="#Stetho" class="headerlink" title="Stetho"></a>Stetho</h4><blockquote>
+<p><strong>用Web调试你的Android应用</strong></p>
+</blockquote>
+<h5 id="Features"><a href="#Features" class="headerlink" title="Features"></a>Features</h5><ul>
+<li>Chrome调试<br>Chrome浏览器输入 chrome://inspect</li>
+<li>网络抓包</li>
+<li>数据库数据查询</li>
+<li>View Hierarchy</li>
+<li>dumpapp</li>
+<li>Javascript Console</li>
+</ul>
+<p>详细的使用方式可以查看官网：<a href="http://facebook.github.io/stetho/" target="_blank" rel="external">Stetho</a></p>
+]]></content>
+    <summary type="html">
+    <![CDATA[<p>在Android开发过程中，除了编译器自带的调试工具外，还有一些是必备但是调试器没有的，像网络抓包、Sqlite查询等，FaceBook开源了一款Debug工具<strong>Stetho</strong>，解决了这些痛点。</p>
+<h4 id="u6293_u5305_]]>
+    </summary>
+    
+      <category term="Android" scheme="http://yourbadman.github.io/tags/Android/"/>
+    
+      <category term="工具" scheme="http://yourbadman.github.io/tags/%E5%B7%A5%E5%85%B7/"/>
+    
+      <category term="调试" scheme="http://yourbadman.github.io/tags/%E8%B0%83%E8%AF%95/"/>
     
   </entry>
   
@@ -414,17 +449,17 @@
     <link href="http://yourbadman.github.io/2012/05/17/popin/"/>
     <id>http://yourbadman.github.io/2012/05/17/popin/</id>
     <published>2012-05-17T04:23:37.000Z</published>
-    <updated>2016-01-13T06:58:42.706Z</updated>
+    <updated>2016-06-07T11:20:40.415Z</updated>
     <content type="html"><![CDATA[<blockquote>
 <p>热血！第一次上台，虽然没有个人的solo，已满足！</p>
 </blockquote>
-<iframe height="498" width="510" src="http://cache.tv.qq.com/qqplayerout.swf?vid=9buCm5O4Jp0" frameborder="0" allowfullscreen></iframe>
+<iframe height="498" width="650" src="http://cache.tv.qq.com/qqplayerout.swf?vid=9buCm5O4Jp0" frameborder="0" allowfullscreen></iframe>
 ]]></content>
     <summary type="html">
     <![CDATA[<blockquote>
 <p>热血！第一次上台，虽然没有个人的solo，已满足！</p>
 </blockquote>
-<iframe height="498" width="510" src="http://cache.tv.qq.com/qqplayerout.swf?vid]]>
+<iframe height="498" width="650" src="http://cache.tv.qq.com/qqplayerout.swf?vid]]>
     </summary>
     
       <category term="Popin" scheme="http://yourbadman.github.io/tags/Popin/"/>

@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="Hexo, NexT" />
+  <meta name="keywords" content="Android,工具,调试," />
 
 
 
@@ -86,15 +86,19 @@
 
 
 
-<meta name="description" content="笔记本">
-<meta property="og:type" content="website">
-<meta property="og:title" content="JsonWong's Blog">
-<meta property="og:url" content="http://yourbadman.github.io/page/2/index.html">
+<meta name="description" content="在Android开发过程中，除了编译器自带的调试工具外，还有一些是必备但是调试器没有的，像网络抓包、Sqlite查询等，FaceBook开源了一款Debug工具Stetho，解决了这些痛点。
+抓包工具windows平台最好用的应该是Fiddle， mac上最好用的应该是Charles。这个应该是App开发必备，不管是Android还是iOS。我就是经常用Fiddle进行对App的抓包（ps:比如对">
+<meta property="og:type" content="article">
+<meta property="og:title" content="用Chrome调试Android App">
+<meta property="og:url" content="http://yourbadman.github.io/2016/03/14/android-tools-debug-stetho/index.html">
 <meta property="og:site_name" content="JsonWong's Blog">
-<meta property="og:description" content="笔记本">
+<meta property="og:description" content="在Android开发过程中，除了编译器自带的调试工具外，还有一些是必备但是调试器没有的，像网络抓包、Sqlite查询等，FaceBook开源了一款Debug工具Stetho，解决了这些痛点。
+抓包工具windows平台最好用的应该是Fiddle， mac上最好用的应该是Charles。这个应该是App开发必备，不管是Android还是iOS。我就是经常用Fiddle进行对App的抓包（ps:比如对">
+<meta property="og:updated_time" content="2016-06-13T13:01:30.408Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="JsonWong's Blog">
-<meta name="twitter:description" content="笔记本">
+<meta name="twitter:title" content="用Chrome调试Android App">
+<meta name="twitter:description" content="在Android开发过程中，除了编译器自带的调试工具外，还有一些是必备但是调试器没有的，像网络抓包、Sqlite查询等，FaceBook开源了一款Debug工具Stetho，解决了这些痛点。
+抓包工具windows平台最好用的应该是Fiddle， mac上最好用的应该是Charles。这个应该是App开发必备，不管是Android还是iOS。我就是经常用Fiddle进行对App的抓包（ps:比如对">
 
 
 
@@ -115,9 +119,9 @@
 
 
 
-  <link rel="canonical" href="http://yourbadman.github.io/page/2/"/>
+  <link rel="canonical" href="http://yourbadman.github.io/2016/03/14/android-tools-debug-stetho/"/>
 
-  <title> JsonWong's Blog </title>
+  <title> 用Chrome调试Android App | JsonWong's Blog </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -138,9 +142,7 @@
     
   
 
-  <div class="container one-collumn sidebar-position-left 
-   page-home 
- ">
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -247,9 +249,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
 
   
   
@@ -269,10 +271,7 @@
             
             
               
-                
-                <a class="post-title-link" href="/2016/01/14/android_annotation/" itemprop="url">
-                  Andorid的ORM中注解框架原理
-                </a>
+                用Chrome调试Android App
               
             
           </h1>
@@ -284,8 +283,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-01-14T00:00:00+08:00" content="2016-01-14">
-              2016-01-14
+            <time itemprop="dateCreated" datetime="2016-03-14T11:13:37+08:00" content="2016-03-14">
+              2016-03-14
             </time>
           </span>
 
@@ -295,8 +294,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/01/14/android_annotation/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/01/14/android_annotation/" itemprop="commentsCount"></span>
+                <a href="/2016/03/14/android-tools-debug-stetho/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/14/android-tools-debug-stetho/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -319,168 +318,119 @@
       
 
       
-        
-          
-          Java中的注解(Annotation)是一个很神奇的东西，特别现在有很多Android库都是使用注解的方式来实现的，以下简单介绍Annotation的原理，以及实现一个注解处理器的流程。
-I.背景
-ORM（Object Relational Mapping）框架采用元数据来描述对象一关系映射细节，
-          ...
+        <p>在Android开发过程中，除了编译器自带的调试工具外，还有一些是必备但是调试器没有的，像网络抓包、Sqlite查询等，FaceBook开源了一款Debug工具<strong>Stetho</strong>，解决了这些痛点。</p>
+<h4 id="u6293_u5305_u5DE5_u5177"><a href="#u6293_u5305_u5DE5_u5177" class="headerlink" title="抓包工具"></a>抓包工具</h4><p><strong>windows</strong>平台最好用的应该是<strong>Fiddle</strong>， mac上最好用的应该是<strong>Charles</strong>。这个应该是App开发必备，不管是Android还是iOS。我就是经常用<strong>Fiddle</strong>进行对<strong>App</strong>的抓包（ps:比如对<strong>网易新闻</strong>抓包分析，很容易就可以模仿写出他们的客户端，你懂的），其中，你必须在模拟器上<strong>设置代理</strong>，才能进行抓包(设置代理不是件容易的事)。<a href="http://blog.csdn.net/lrckid/article/details/42486923" target="_blank" rel="external">Genymotion 使用 Fiddler抓包</a>教程。</p>
+<h4 id="Sqlite_u67E5_u8BE2"><a href="#Sqlite_u67E5_u8BE2" class="headerlink" title="Sqlite查询"></a>Sqlite查询</h4><p>这个编译器自带的插件查看很麻烦，Android的调试器需要root才会取得到,这个真的很蛋疼。</p>
+<h4 id="Stetho"><a href="#Stetho" class="headerlink" title="Stetho"></a>Stetho</h4><blockquote>
+<p><strong>用Web调试你的Android应用</strong></p>
+</blockquote>
+<h5 id="Features"><a href="#Features" class="headerlink" title="Features"></a>Features</h5><ul>
+<li>Chrome调试<br>Chrome浏览器输入 chrome://inspect</li>
+<li>网络抓包</li>
+<li>数据库数据查询</li>
+<li>View Hierarchy</li>
+<li>dumpapp</li>
+<li>Javascript Console</li>
+</ul>
+<p>详细的使用方式可以查看官网：<a href="http://facebook.github.io/stetho/" target="_blank" rel="external">Stetho</a></p>
 
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/01/14/android_annotation/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
+      
+    </div>
+
+    <div>
+      
         
       
     </div>
 
     <div>
       
-    </div>
+        
 
-    <div>
       
     </div>
 
     <footer class="post-footer">
       
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2012/05/17/popin/" itemprop="url">
-                  街舞-迎新晚会
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2012-05-17T12:23:37+08:00" content="2012-05-17">
-              2012-05-17
-            </time>
-          </span>
-
+        <div class="post-tags">
           
-
+            <a href="/tags/Android/" rel="tag">#Android</a>
           
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2012/05/17/popin/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2012/05/17/popin/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
+            <a href="/tags/工具/" rel="tag">#工具</a>
           
-
-          
-
-          
-          
-
+            <a href="/tags/调试/" rel="tag">#调试</a>
           
         </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
       
 
       
-        
-          
-          
-热血！第一次上台，虽然没有个人的solo，已满足！
-
-
-
-          
-
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2012/05/17/popin/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/03/04/android-handle-architecture/" rel="next" title="Android Handler机制">
+                <i class="fa fa-chevron-left"></i> Android Handler机制
+              </a>
+            
           </div>
-        
-      
-    </div>
 
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/25/android-asynctask-architecture/" rel="prev" title="AsyncTask原理">
+                AsyncTask原理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
       
 
       
-
-      
-      
-        <div class="post-eof"></div>
       
     </footer>
   </article>
 
 
-    
-  </section>
 
-  
-  <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
-  </nav>
+    <div class="post-spread">
+      
+        <div class="ds-share flat" data-thread-key="2016/03/14/android-tools-debug-stetho/"
+     data-title="用Chrome调试Android App"
+     data-content=""
+     data-url="http://yourbadman.github.io/2016/03/14/android-tools-debug-stetho/">
+  <div class="ds-share-inline">
+    <ul  class="ds-share-icons-16">
 
+      <li data-toggle="ds-share-icons-more"><a class="ds-more" href="javascript:void(0);">分享到：</a></li>
+      <li><a class="ds-weibo" href="javascript:void(0);" data-service="weibo">微博</a></li>
+      <li><a class="ds-qzone" href="javascript:void(0);" data-service="qzone">QQ空间</a></li>
+      <li><a class="ds-qqt" href="javascript:void(0);" data-service="qqt">腾讯微博</a></li>
+      <li><a class="ds-wechat" href="javascript:void(0);" data-service="wechat">微信</a></li>
+
+    </ul>
+    <div class="ds-share-icons-more">
+    </div>
+  </div>
+</div>
+      
+    </div>
+  </div>
 
 
           </div>
           
 
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
 
           
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/03/14/android-tools-debug-stetho/"
+           data-title="用Chrome调试Android App" data-url="http://yourbadman.github.io/2016/03/14/android-tools-debug-stetho/">
+      </div>
+    
+  </div>
+
 
         </div>
         
@@ -500,8 +450,17 @@ ORM（Object Relational Mapping）框架采用元数据来描述对象一关系�
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview sidebar-panel  sidebar-panel-active ">
+      <section class="site-overview sidebar-panel ">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/images/avatar.jpg"
@@ -562,6 +521,17 @@ ORM（Object Relational Mapping）框架采用元数据来描述对象一关系�
 
       </section>
 
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#u6293_u5305_u5DE5_u5177"><span class="nav-number">1.</span> <span class="nav-text">抓包工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Sqlite_u67E5_u8BE2"><span class="nav-number">2.</span> <span class="nav-text">Sqlite查询</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Stetho"><span class="nav-number">3.</span> <span class="nav-text">Stetho</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Features"><span class="nav-number">3.1.</span> <span class="nav-text">Features</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
       
 
     </div>
@@ -665,6 +635,10 @@ ORM（Object Relational Mapping）框架采用元数据来描述对象一关系�
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
 
   
 
